@@ -20,7 +20,7 @@ groen = (0,255,0)
 iets = (200,12,60)
 
 #Globale bs
-coins = 0
+iron = 0
 
 # Hoofdlus
 running = True
