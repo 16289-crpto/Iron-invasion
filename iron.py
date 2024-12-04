@@ -12,7 +12,12 @@ pygame.time.Clock()
 fps = 60
 
 # Kleuren definiëren
+zwart = (0,0,0)
 wit = (255, 255, 255)
+rood = (255,0,0)
+blauw = (0,0,255)
+groen = (0,255,0)
+iets = (200,12,60)
 
 # Hoofdlus
 running = True
@@ -22,7 +27,7 @@ while running:
             running = False
 
     # Scherm vullen met wit
-    screen.fill(wit)
+    screen.fill(iets)
 
     # Werk het scherm bij
     pygame.display.flip()
