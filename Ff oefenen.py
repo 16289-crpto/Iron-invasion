@@ -25,7 +25,9 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
+DARKGREEN = (0, 100, 0)
 BLUE = (0, 0, 255)
+SKYBLUE = (135, 206, 235)
 GRAY = (128, 128, 128)
 
 # Upgrade Variables
@@ -242,10 +244,10 @@ class Game:
     def run(self):
         running = True
         while running:
-            screen.fill(BLACK)
+            screen.fill(SKYBLUE)
 
             # Draw path
-            pygame.draw.rect(screen, GRAY, (0, PATH_TOP, SCREEN_WIDTH, PATH_BOTTOM - PATH_TOP))
+            pygame.draw.rect(screen, DARKGREEN, (0, PATH_TOP, SCREEN_WIDTH, PATH_BOTTOM - PATH_TOP))
 
             # Event handling
             for event in pygame.event.get():
