@@ -12,8 +12,8 @@ PATH_TOP = SCREEN_HEIGHT // 4
 PATH_BOTTOM = 3 * SCREEN_HEIGHT // 4
 FPS = 60
 TANK_COST = 50
-BASE_TANK_DAMAGE = 15
-BASE_TANK_HEALTH = 200
+BASE_TANK_DAMAGE = 10
+BASE_TANK_HEALTH = 100
 ENEMY_DAMAGE = 10
 ENEMY_HEALTH = 100
 MAX_ESCAPED_ENEMIES = 10
@@ -45,8 +45,8 @@ class Tank(pygame.sprite.Sprite):
         self.image = pygame.Surface((40, 40))
         self.image.fill(BLUE)
         self.rect = self.image.get_rect(center=(x, y))
-        self.health = BASE_TANK_HEALTH + tank_health_upgrade * 50
-        self.damage = BASE_TANK_DAMAGE + tank_damage_upgrade * 5
+        self.health = BASE_TANK_HEALTH + tank_health_upgrade + 10
+        self.damage = BASE_TANK_DAMAGE + tank_damage_upgrade + 2
         self.speed = 2
         self.target = None
 
@@ -77,7 +77,7 @@ class Tank(pygame.sprite.Sprite):
     def draw_health_bar(self, screen):
         bar_width = 40
         bar_height = 5
-        max_health = BASE_TANK_HEALTH + tank_health_upgrade * 50
+        max_health = BASE_TANK_HEALTH + tank_health_upgrade + 10
         health_ratio = self.health / max_health
         bar_color = GREEN if health_ratio > 0.5 else RED
         pygame.draw.rect(screen, GRAY, (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
@@ -85,12 +85,13 @@ class Tank(pygame.sprite.Sprite):
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, speed, health):
+    def __init__(self, x, y, speed, health, damage):
         super().__init__()
         self.image = pygame.Surface((30, 30))
         self.image.fill(RED)
         self.rect = self.image.get_rect(center=(x, y))
         self.health = health
+        self.damage = damage
         self.max_health = health  # Store maximum health for consistent health bar
         self.speed = speed
         self.target = None
@@ -116,8 +117,6 @@ class Enemy(pygame.sprite.Sprite):
                     self.target.kill()
         else:
             self.rect.x += self.speed
-            if self.rect.x > SCREEN_WIDTH:
-                self.escaped = True  # Mark enemy as escaped
 
     def draw_health_bar(self, screen):
         bar_width = 30
@@ -155,9 +154,10 @@ class Game:
         self.wave = 1
         self.escaped_enemies = 0
         self.wave_active = True
-        self.enemies_to_spawn = 5  # Number of enemies in the first wave
-        self.spawned_enemies = 0  # Track how many enemies have been spawned
+        self.enemies_to_spawn = 5
+        self.spawned_enemies = 0
         self.enemy_health_multiplier = 1.0
+        self.enemy_damage_multiplier = 1.0
         self.enemy_speed_multiplier = 1.0
         self.tank_button = Button(SCREEN_WIDTH - 150, SCREEN_HEIGHT - 50, 140, 40, "Place Tank", self.place_tank)
 
@@ -173,7 +173,8 @@ class Game:
                 y = random.randint(PATH_TOP, PATH_BOTTOM)
                 speed = random.randint(2, 4) * self.enemy_speed_multiplier
                 health = ENEMY_HEALTH * self.enemy_health_multiplier
-                enemy = Enemy(0, y, speed, health)
+                damage = ENEMY_DAMAGE * self.enemy_damage_multiplier
+                enemy = Enemy(0, y, speed, health, damage)
                 self.enemies.add(enemy)
                 self.spawned_enemies += 1
 
@@ -185,13 +186,13 @@ class Game:
     def start_new_wave(self):
         self.wave += 1
         self.enemy_health_multiplier += 0.2
+        self.enemy_damage_multiplier += 0.1
         self.enemy_speed_multiplier += 0.1
-        self.enemies_to_spawn += 3  # Increase number of enemies per wave
+        self.enemies_to_spawn += 3
         self.spawned_enemies = 0
         self.wave_active = True
 
     def place_tank(self):
-        global tank_health_upgrade, tank_damage_upgrade
         if self.resources >= TANK_COST:
             x = random.randint(SCREEN_WIDTH - 100, SCREEN_WIDTH - 40)
             y = random.randint(PATH_TOP, PATH_BOTTOM)
@@ -279,9 +280,56 @@ class Game:
             clock.tick(FPS)
 
 
+def upgrade_menu():
+    global tank_damage_upgrade, tank_health_upgrade, upgrade_points
+
+    damage_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Upgrade Damage (2 pts)", "damage")
+    health_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 50, "Upgrade Health (2 pts)", "health")
+    back_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Back", "back")
+
+    while True:
+        screen.fill(BLACK)
+
+        # Event handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if damage_button.is_clicked(event.pos) and upgrade_points >= 2:
+                    tank_damage_upgrade += 1
+                    upgrade_points -= 2
+                elif health_button.is_clicked(event.pos) and upgrade_points >= 2:
+                    tank_health_upgrade += 1
+                    upgrade_points -= 2
+                elif back_button.is_clicked(event.pos):
+                    return
+
+        # Draw buttons
+        damage_button.draw(screen)
+        health_button.draw(screen)
+        back_button.draw(screen)
+
+        # Draw upgrade status
+        total_damage = BASE_TANK_DAMAGE + tank_damage_upgrade * 2
+        total_health = BASE_TANK_HEALTH + tank_health_upgrade * 10
+
+        status_text = FONT.render(f"Upgrade Points: {upgrade_points}", True, WHITE)
+        damage_text = FONT.render(f"Total Damage: {total_damage}", True, WHITE)
+        health_text = FONT.render(f"Total Health: {total_health}", True, WHITE)
+
+        screen.blit(status_text, (10, 10))
+        screen.blit(damage_text, (10, 50))
+        screen.blit(health_text, (10, 90))
+
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
 def main_menu():
     start_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Start Game", "start")
-    quit_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 50, "Quit", "quit")
+    upgrade_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 50, "Upgrades", "upgrades")
+    quit_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Quit", "quit")
 
     while True:
         screen.fill(BLACK)
@@ -295,12 +343,15 @@ def main_menu():
                 if start_button.is_clicked(event.pos):
                     game = Game()
                     game.run()
+                elif upgrade_button.is_clicked(event.pos):
+                    upgrade_menu()
                 elif quit_button.is_clicked(event.pos):
                     pygame.quit()
                     quit()
 
         # Draw buttons
         start_button.draw(screen)
+        upgrade_button.draw(screen)
         quit_button.draw(screen)
 
         # Draw title
