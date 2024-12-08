@@ -8,8 +8,8 @@ pygame.init()
 # Constants
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-PATH_TOP = SCREEN_HEIGHT // 4
-PATH_BOTTOM = 3 * SCREEN_HEIGHT // 4
+PATH_TOP = SCREEN_HEIGHT - 200
+PATH_BOTTOM = SCREEN_HEIGHT - 50
 FPS = 60
 TANK_COST = 50
 BASE_TANK_DAMAGE = 10
@@ -25,7 +25,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
-DARKGREEN = (0, 100, 0)
+DARKGREEN = (0, 100, 0,)
 BLUE = (0, 0, 255)
 SKYBLUE = (135, 206, 235)
 GRAY = (128, 128, 128)
@@ -39,6 +39,9 @@ tank_health_upgrade = 0
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Iron Fuckin Invasion BABAYYYY")
 clock = pygame.time.Clock()
+
+# Load background image
+background_image = pygame.image.load("background.png").convert()
 
 # Classes
 class Tank(pygame.sprite.Sprite):
@@ -145,7 +148,6 @@ class Button:
     def is_clicked(self, mouse_pos):
         return self.rect.collidepoint(mouse_pos)
 
-
 class Game:
     def __init__(self):
         self.tanks = pygame.sprite.Group()
@@ -244,10 +246,12 @@ class Game:
     def run(self):
         running = True
         while running:
-            screen.fill(SKYBLUE)
+            # Use the background image for the screen
+            pygame.draw.rect(screen, DARKGREEN, (0, PATH_TOP, SCREEN_WIDTH, PATH_BOTTOM - PATH_TOP))
+            screen.blit(background_image, (0, 0))  # Draw background at top-left corner
 
             # Draw path
-            pygame.draw.rect(screen, DARKGREEN, (0, PATH_TOP, SCREEN_WIDTH, PATH_BOTTOM - PATH_TOP))
+        
 
             # Event handling
             for event in pygame.event.get():
@@ -280,7 +284,6 @@ class Game:
 
             pygame.display.flip()
             clock.tick(FPS)
-
 
 def upgrade_menu():
     global tank_damage_upgrade, tank_health_upgrade, upgrade_points
