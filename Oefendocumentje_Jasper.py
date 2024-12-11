@@ -1,15 +1,14 @@
-import pygame 
+import pygame
 import random
 import math
-
 # Initialize Pygame
 pygame.init()
 
 # Constants
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-PATH_TOP = SCREEN_HEIGHT - 200
-PATH_BOTTOM = SCREEN_HEIGHT - 50
+PATH_TOP = SCREEN_HEIGHT // 4
+PATH_BOTTOM = 3 * SCREEN_HEIGHT // 4
 FPS = 60
 TANK_COST = 50
 BASE_TANK_DAMAGE = 10
@@ -17,7 +16,7 @@ BASE_TANK_HEALTH = 100
 ENEMY_DAMAGE = 10
 ENEMY_HEALTH = 100
 MAX_ESCAPED_ENEMIES = 10
-FONT = pygame.font.Font(None, 36)
+FONT = pygame.font.Font(None, 24)
 RESOURCE_GENERATION_INTERVAL = 1000  # 1 second
 
 # Colors
@@ -25,7 +24,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
-DARKGREEN = (0, 100, 0,)
+DARKGREEN = (0, 100, 0)
 BLUE = (0, 0, 255)
 SKYBLUE = (135, 206, 235)
 GRAY = (128, 128, 128)
@@ -37,30 +36,20 @@ tank_health_upgrade = 0
 
 # Game setup
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Iron Fuckin Invasion BABAYYYY")
 clock = pygame.time.Clock()
-
-# Load background image
-background_image = pygame.image.load("background.png").convert()
 
 # Classes
 class Tank(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
-        self.image = pygame.image.load("Father.png").convert_alpha()  
-        self.image = pygame.transform.scale(self.image, (200, 120))
+        self.image = pygame.image.load("OneDrive\Informatica\Python\Iron invasion\Iron-invasion\R2D22.png").convert_alpha()  # Laad robot-afbeelding
+        self.image = pygame.transform.scale(self.image, (60, 60))  
         self.rect = self.image.get_rect(center=(x, y))
-        self.max_health = BASE_TANK_HEALTH + tank_health_upgrade + 10  # Opslaan van maximale gezondheid
+        self.health = BASE_TANK_HEALTH + tank_health_upgrade + 10
         self.damage = BASE_TANK_DAMAGE + tank_damage_upgrade + 2
         self.speed = 2
         self.target = None
-
-    def draw_health_bar(self, screen):
-        bar_width = 40
-        bar_height = 5
-        health_ratio = self.health / self.max_health
-        bar_color = GREEN if health_ratio > 0.5 else RED
-        pygame.draw.rect(screen, GRAY, (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
-        pygame.draw.rect(screen, bar_color, (self.rect.centerx - bar_width // 2, self.rect.top - 10, int(bar_width * health_ratio), bar_height))
 
     def find_target(self, enemies):
         if enemies:
@@ -87,7 +76,7 @@ class Tank(pygame.sprite.Sprite):
                     self.target.kill()
 
     def draw_health_bar(self, screen):
-        bar_width = 30
+        bar_width = 40
         bar_height = 5
         max_health = BASE_TANK_HEALTH + tank_health_upgrade + 10
         health_ratio = self.health / max_health
@@ -95,97 +84,18 @@ class Tank(pygame.sprite.Sprite):
         pygame.draw.rect(screen, GRAY, (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
         pygame.draw.rect(screen, bar_color, (self.rect.centerx - bar_width // 2, self.rect.top - 10, int(bar_width * health_ratio), bar_height))
 
-class Projectile(pygame.sprite.Sprite):
-    def __init__(self, x, y, target, damage):
-        super().__init__()
-        self.image = pygame.Surface((10, 10))
-        self.image.fill(WHITE)  # Kleur van de kogel
-        self.rect = self.image.get_rect(center=(x, y))
-        self.target = target
-        self.speed = 5
-        self.damage = damage
-
-    def update(self):
-        if self.target:
-            # Beweeg de kogel richting de vijand
-            dx, dy = self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery
-            distance = math.hypot(dx, dy)
-            if distance > 0:
-                dx, dy = dx / distance, dy / distance
-                self.rect.x += dx * self.speed
-                self.rect.y += dy * self.speed
-
-            # Controleer of de kogel de vijand raakt
-            if self.rect.colliderect(self.target.rect):
-                self.target.health -= self.damage
-                if self.target.health <= 0:
-                    self.target.kill()
-                self.kill()  # Verwijder de kogel
-        else:
-            self.kill()  # Verwijder de kogel als er geen doelwit meer is
-
-# In de RangedTank klasse
-class RangedTank(Tank):
-    def __init__(self, x, y):
-        super().__init__(x, y)
-        self.image.fill(SKYBLUE)  # Unieke kleur voor Ranged Tank
-        self.max_health = 50
-        self.health = self.max_health
-        self.damage = 50  # Dubbele schade ten opzichte van de gewone tank (stel dat gewone tank 10 heeft)
-        self.range = 150
-        self.cooldown = 750  # Tijd in milliseconden tussen schoten
-        self.speed = 1  # Houd dezelfde snelheid
-
-        self.last_shot_time = pygame.time.get_ticks()
-
-    def draw_health_bar(self, screen):
-        bar_width = 30
-        bar_height = 5
-        health_ratio = self.health / self.max_health
-        bar_color = GREEN if health_ratio > 0.5 else RED
-        pygame.draw.rect(screen, GRAY, (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
-        pygame.draw.rect(screen, bar_color, (self.rect.centerx - bar_width // 2, self.rect.top - 10, int(bar_width * health_ratio), bar_height))
-
-    def move_and_attack(self, projectiles_group):
-        current_time = pygame.time.get_ticks()
-        if self.target:
-            # Beweeg niet te dicht naar de vijand, blijf binnen afstand
-            distance = math.hypot(self.rect.centerx - self.target.rect.centerx, self.rect.centery - self.target.rect.centery)
-            if distance > self.range:
-                # Beweeg richting de vijand
-                dx, dy = self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery
-                if distance > 0:
-                    dx, dy = dx / distance, dy / distance
-                    self.rect.x += dx * self.speed
-                    self.rect.y += dy * self.speed
-
-            # Schiet als de vijand binnen bereik is
-            elif distance <= self.range and current_time - self.last_shot_time >= self.cooldown:
-                projectile = Projectile(self.rect.centerx, self.rect.centery, self.target, self.damage)
-                projectiles_group.add(projectile)  # Voeg de kogel toe aan de groep projectielen
-                self.last_shot_time = current_time
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, health, damage):
         super().__init__()
-        self.image = pygame.image.load("R2D2.png").convert_alpha() 
+        self.image = pygame.image.load("OneDrive\Informatica\Python\Iron invasion\Iron-invasion\Father2.png").convert_alpha()  # Laad robot-afbeelding
         self.image = pygame.transform.scale(self.image, (60, 60))
         self.rect = self.image.get_rect(center=(x, y))
-        self.max_health = health  # Opslaan van maximale gezondheid
-        self.health = self.max_health
+        self.health = health
         self.damage = damage
-        self.max_health = health  
+        self.max_health = health  # Store maximum health for consistent health bar
         self.speed = speed
         self.target = None
-
-    def draw_health_bar(self, screen):
-        bar_width = 30
-        bar_height = 5
-        health_ratio = self.health / self.max_health
-        bar_color = GREEN if health_ratio > 0.5 else RED
-        pygame.draw.rect(screen, GRAY, (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
-        pygame.draw.rect(screen, bar_color, (self.rect.centerx - bar_width // 2, self.rect.top - 10, int(bar_width * health_ratio), bar_height))
-
 
     def find_target(self, tanks):
         if tanks:
@@ -209,6 +119,15 @@ class Enemy(pygame.sprite.Sprite):
         else:
             self.rect.x += self.speed
 
+    def draw_health_bar(self, screen):
+        bar_width = 30
+        bar_height = 5
+        health_ratio = self.health / self.max_health
+        bar_color = GREEN if health_ratio > 0.5 else RED
+        pygame.draw.rect(screen, GRAY, (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
+        pygame.draw.rect(screen, bar_color, (self.rect.centerx - bar_width // 2, self.rect.top - 10, int(bar_width * health_ratio), bar_height))
+
+
 class Button:
     def __init__(self, x, y, width, height, text, action):
         self.rect = pygame.Rect(x, y, width, height)
@@ -225,6 +144,7 @@ class Button:
     def is_clicked(self, mouse_pos):
         return self.rect.collidepoint(mouse_pos)
 
+
 class Game:
     def __init__(self):
         self.tanks = pygame.sprite.Group()
@@ -240,10 +160,7 @@ class Game:
         self.enemy_health_multiplier = 1.0
         self.enemy_damage_multiplier = 1.0
         self.enemy_speed_multiplier = 1.0
-        self.projectile = pygame.sprite.Group()  # Groep voor alle projectielen
-        self.tank_button = Button(SCREEN_WIDTH - 150, SCREEN_HEIGHT - 100, 140, 40, "Place Tank", lambda: self.place_tank())
-        self.ranged_tank_button = Button(SCREEN_WIDTH - 150, SCREEN_HEIGHT - 50, 140, 40, "Place Ranged", lambda: self.place_ranged_tank())
-
+        self.tank_button = Button(SCREEN_WIDTH - 150, SCREEN_HEIGHT - 50, 140, 40, "Place Tank", self.place_tank)
 
     def generate_resources(self):
         if pygame.time.get_ticks() - self.resource_timer > RESOURCE_GENERATION_INTERVAL:
@@ -276,14 +193,6 @@ class Game:
         self.spawned_enemies = 0
         self.wave_active = True
 
-    def place_ranged_tank(self):
-        if self.resources >= TANK_COST:
-            x = random.randint(SCREEN_WIDTH - 100, SCREEN_WIDTH - 40)
-            y = random.randint(PATH_TOP, PATH_BOTTOM)
-            ranged_tank = RangedTank(x, y)
-            self.tanks.add(ranged_tank)
-            self.resources -= TANK_COST
-
     def place_tank(self):
         if self.resources >= TANK_COST:
             x = random.randint(SCREEN_WIDTH - 100, SCREEN_WIDTH - 40)
@@ -295,11 +204,7 @@ class Game:
     def handle_tank_actions(self):
         for tank in self.tanks:
             tank.find_target(self.enemies)
-            if isinstance(tank, RangedTank):
-                tank.move_and_attack(self.projectile)  # Geef de groep projectielen door
-            else:
-                tank.move_and_attack()
-
+            tank.move_and_attack()
 
     def handle_enemy_actions(self):
         for enemy in list(self.enemies):
@@ -310,16 +215,15 @@ class Game:
                 enemy.kill()
 
     def draw_ui(self):
-        resources_text = FONT.render(f"Resources: {self.resources}", True, BLACK)
-        upgrade_points_text = FONT.render(f"Upgrade Points: {upgrade_points}", True, BLACK)
-        wave_text = FONT.render(f"Wave: {self.wave}", True, BLACK)
-        escaped_text = FONT.render(f"Escaped: {self.escaped_enemies}/{MAX_ESCAPED_ENEMIES}", True, BLACK)
+        resources_text = FONT.render(f"Resources: {self.resources}", True, WHITE)
+        upgrade_points_text = FONT.render(f"Upgrade Points: {upgrade_points}", True, WHITE)
+        wave_text = FONT.render(f"Wave: {self.wave}", True, WHITE)
+        escaped_text = FONT.render(f"Escaped: {self.escaped_enemies}/{MAX_ESCAPED_ENEMIES}", True, WHITE)
         screen.blit(resources_text, (10, 10))
         screen.blit(upgrade_points_text, (10, 50))
         screen.blit(wave_text, (10, 90))
         screen.blit(escaped_text, (10, 130))
         self.tank_button.draw(screen)
-        self.ranged_tank_button.draw(screen)
 
     def check_game_over(self):
         if self.escaped_enemies >= MAX_ESCAPED_ENEMIES:
@@ -339,9 +243,10 @@ class Game:
     def run(self):
         running = True
         while running:
-            # Use the background image for the screen
+            screen.fill(SKYBLUE)
+
+            # Draw path
             pygame.draw.rect(screen, DARKGREEN, (0, PATH_TOP, SCREEN_WIDTH, PATH_BOTTOM - PATH_TOP))
-            screen.blit(background_image, (0, 0))  # Draw background at top-left corner
 
             # Event handling
             for event in pygame.event.get():
@@ -351,21 +256,17 @@ class Game:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if self.tank_button.is_clicked(event.pos):
                         self.tank_button.action()
-                    elif self.ranged_tank_button.is_clicked(event.pos):
-                        self.ranged_tank_button.action()
 
             # Game logic
             self.generate_resources()
             self.spawn_enemy()
             self.handle_tank_actions()
             self.handle_enemy_actions()
-            self.projectile.update()  # Update alle projectielen
             self.check_wave_end()
 
             # Draw everything
             self.tanks.draw(screen)
             self.enemies.draw(screen)
-            self.projectile.draw(screen)  # Teken alle projectielen
             for tank in self.tanks:
                 tank.draw_health_bar(screen)
             for enemy in self.enemies:
@@ -378,6 +279,7 @@ class Game:
 
             pygame.display.flip()
             clock.tick(FPS)
+
 
 def upgrade_menu():
     global tank_damage_upgrade, tank_health_upgrade, upgrade_points
@@ -424,6 +326,7 @@ def upgrade_menu():
         pygame.display.flip()
         clock.tick(FPS)
 
+
 def main_menu():
     start_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Start Game", "start")
     upgrade_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 50, "Upgrades", "upgrades")
@@ -453,12 +356,13 @@ def main_menu():
         quit_button.draw(screen)
 
         # Draw title
-        title_text = FONT.render("Iron Invasion", True, WHITE)
+        title_text = FONT.render("iron Fucking Invasion", True, WHITE)
         title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 150))
         screen.blit(title_text, title_rect)
 
         pygame.display.flip()
         clock.tick(FPS)
+
 
 if __name__ == "__main__":
     main_menu()
