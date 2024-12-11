@@ -1,15 +1,14 @@
 import pygame
 import random
 import math
-
 # Initialize Pygame
 pygame.init()
 
 # Constants
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-PATH_TOP = SCREEN_HEIGHT - 200
-PATH_BOTTOM = SCREEN_HEIGHT - 50
+PATH_TOP = SCREEN_HEIGHT // 4
+PATH_BOTTOM = 3 * SCREEN_HEIGHT // 4
 FPS = 60
 TANK_COST = 50
 BASE_TANK_DAMAGE = 10
@@ -17,7 +16,7 @@ BASE_TANK_HEALTH = 100
 ENEMY_DAMAGE = 10
 ENEMY_HEALTH = 100
 MAX_ESCAPED_ENEMIES = 10
-FONT = pygame.font.Font(None, 36)
+FONT = pygame.font.Font(None, 24)
 RESOURCE_GENERATION_INTERVAL = 1000  # 1 second
 
 # Colors
@@ -25,7 +24,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
-DARKGREEN = (0, 100, 0,)
+DARKGREEN = (0, 100, 0)
 BLUE = (0, 0, 255)
 SKYBLUE = (135, 206, 235)
 GRAY = (128, 128, 128)
@@ -40,15 +39,12 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Iron Fuckin Invasion BABAYYYY")
 clock = pygame.time.Clock()
 
-# Load background image
-background_image = pygame.image.load("background.png").convert()
-
 # Classes
 class Tank(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
-        self.image = pygame.image.load("Father.png").convert_alpha()  
-        self.image = pygame.transform.scale(self.image, (200, 120))
+        self.image = pygame.image.load("OneDrive\Informatica\Python\Iron invasion\Iron-invasion\R2D22.png").convert_alpha()  # Laad robot-afbeelding
+        self.image = pygame.transform.scale(self.image, (60, 60))  
         self.rect = self.image.get_rect(center=(x, y))
         self.health = BASE_TANK_HEALTH + tank_health_upgrade + 10
         self.damage = BASE_TANK_DAMAGE + tank_damage_upgrade + 2
@@ -92,12 +88,12 @@ class Tank(pygame.sprite.Sprite):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, health, damage):
         super().__init__()
-        self.image = pygame.image.load("R2D2.png").convert_alpha() 
+        self.image = pygame.image.load("OneDrive\Informatica\Python\Iron invasion\Iron-invasion\Father2.png").convert_alpha()  # Laad robot-afbeelding
         self.image = pygame.transform.scale(self.image, (60, 60))
         self.rect = self.image.get_rect(center=(x, y))
         self.health = health
         self.damage = damage
-        self.max_health = health  
+        self.max_health = health  # Store maximum health for consistent health bar
         self.speed = speed
         self.target = None
 
@@ -147,6 +143,7 @@ class Button:
 
     def is_clicked(self, mouse_pos):
         return self.rect.collidepoint(mouse_pos)
+
 
 class Game:
     def __init__(self):
@@ -218,10 +215,10 @@ class Game:
                 enemy.kill()
 
     def draw_ui(self):
-        resources_text = FONT.render(f"Resources: {self.resources}", True, BLACK)
-        upgrade_points_text = FONT.render(f"Upgrade Points: {upgrade_points}", True, BLACK)
-        wave_text = FONT.render(f"Wave: {self.wave}", True, BLACK)
-        escaped_text = FONT.render(f"Escaped: {self.escaped_enemies}/{MAX_ESCAPED_ENEMIES}", True, BLACK)
+        resources_text = FONT.render(f"Resources: {self.resources}", True, WHITE)
+        upgrade_points_text = FONT.render(f"Upgrade Points: {upgrade_points}", True, WHITE)
+        wave_text = FONT.render(f"Wave: {self.wave}", True, WHITE)
+        escaped_text = FONT.render(f"Escaped: {self.escaped_enemies}/{MAX_ESCAPED_ENEMIES}", True, WHITE)
         screen.blit(resources_text, (10, 10))
         screen.blit(upgrade_points_text, (10, 50))
         screen.blit(wave_text, (10, 90))
@@ -246,12 +243,10 @@ class Game:
     def run(self):
         running = True
         while running:
-            # Use the background image for the screen
-            pygame.draw.rect(screen, DARKGREEN, (0, PATH_TOP, SCREEN_WIDTH, PATH_BOTTOM - PATH_TOP))
-            screen.blit(background_image, (0, 0))  # Draw background at top-left corner
+            screen.fill(SKYBLUE)
 
             # Draw path
-        
+            pygame.draw.rect(screen, DARKGREEN, (0, PATH_TOP, SCREEN_WIDTH, PATH_BOTTOM - PATH_TOP))
 
             # Event handling
             for event in pygame.event.get():
@@ -284,6 +279,7 @@ class Game:
 
             pygame.display.flip()
             clock.tick(FPS)
+
 
 def upgrade_menu():
     global tank_damage_upgrade, tank_health_upgrade, upgrade_points
@@ -360,7 +356,7 @@ def main_menu():
         quit_button.draw(screen)
 
         # Draw title
-        title_text = FONT.render("iron Invasion", True, WHITE)
+        title_text = FONT.render("iron Fucking Invasion", True, WHITE)
         title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 150))
         screen.blit(title_text, title_rect)
 
