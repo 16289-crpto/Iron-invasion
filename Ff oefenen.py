@@ -37,7 +37,7 @@ tank_health_upgrade = 0
 
 # Game setup
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Iron Fuckin Invasion BABAYYYY")
+pygame.display.set_caption("Iron Invasion")
 clock = pygame.time.Clock()
 
 # Load background image
@@ -360,7 +360,7 @@ def main_menu():
         quit_button.draw(screen)
 
         # Draw title
-        title_text = FONT.render("iron Fucking Invasion", True, WHITE)
+        title_text = FONT.render("iron Invasion", True, WHITE)
         title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 150))
         screen.blit(title_text, title_rect)
 
