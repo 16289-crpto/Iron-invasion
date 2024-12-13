@@ -36,8 +36,23 @@ tank_health_upgrade = 0
 
 # Game setup
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Iron Fuckin Invasion BABAYYYY")
+pygame.display.set_caption("Iron Invasion")
 clock = pygame.time.Clock()
+
+#scores opslaan
+#def save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade): 
+    #with open('saved.txt', 'w') as f:
+       # f.write(f"Upgrade points: {upgrade_points}\nDamage: {tank_damage_upgrade}\nHealth: {tank_health_upgrade}")
+
+#scores laden
+#def load_stats(): 
+    #try:
+    #    with open('saved.txt', 'r') as f:
+      #      f.
+    #except FileNotFoundError:
+    #    print("Bestand niet gevonden")
+
+
 
 # Classes
 class Tank(pygame.sprite.Sprite):
@@ -88,7 +103,7 @@ class Tank(pygame.sprite.Sprite):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, health, damage):
         super().__init__()
-        self.image = pygame.image.load("OneDrive\Informatica\Python\Iron invasion\Iron-invasion\Father2.png").convert_alpha()  # Laad robot-afbeelding
+        self.image = pygame.image.load("OneDrive\Informatica\Python\Iron invasion\Iron-invasion\Father.png").convert_alpha()  # Laad robot-afbeelding
         self.image = pygame.transform.scale(self.image, (60, 60))
         self.rect = self.image.get_rect(center=(x, y))
         self.health = health
@@ -356,7 +371,7 @@ def main_menu():
         quit_button.draw(screen)
 
         # Draw title
-        title_text = FONT.render("iron Fucking Invasion", True, WHITE)
+        title_text = FONT.render("iron Invasion", True, WHITE)
         title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 150))
         screen.blit(title_text, title_rect)
 

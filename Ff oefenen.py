@@ -139,9 +139,9 @@ class RangedTank(Tank):
         self.image = pygame.transform.scale(self.image, (80, 100))
         self.max_health = 50
         self.health = self.max_health
-        self.damage = 50  # Dubbele schade ten opzichte van de gewone tank (stel dat gewone tank 10 heeft)
+        self.damage = 34  # Dubbele schade ten opzichte van de gewone tank (stel dat gewone tank 10 heeft)
         self.range = 150
-        self.cooldown = 750  # Tijd in milliseconden tussen schoten
+        self.cooldown = 750 # Tijd in milliseconden tussen schoten
         self.speed = 1  # Houd dezelfde snelheid
 
         self.last_shot_time = pygame.time.get_ticks()
@@ -176,6 +176,11 @@ class RangedTank(Tank):
                 projectile = Projectile(self.rect.centerx, self.rect.centery, self.target, self.damage)
                 projectiles_group.add(projectile)  # Voeg de kogel toe aan de groep projectielen
                 self.last_shot_time = current_time
+                if distance < 150:
+                    self.target.health -= self.damage
+                    global upgrade_points
+                    upgrade_points += 1  # Earn an upgrade point
+                    self.target.kill()
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, health, damage):
@@ -305,13 +310,20 @@ class Game:
             self.resources -= TANK_COST
 
     def handle_tank_actions(self):
-        for tank in self.tanks:
+        for tank in list(self.tanks):
             tank.find_target(self.enemies)
             if isinstance(tank, RangedTank):
                 tank.move_and_attack(self.projectile)  # Geef de groep projectielen door
             else:
                 tank.move_and_attack()
 
+            # Controleer of een tank de linkerzijde bereikt
+            if tank.rect.x <= -90:
+                self.escaped_enemies -= 1  # Verminder het aantal ontsnapte vijanden
+                tank.kill()  # Verwijder de tank
+            if tank.rect.x <= -90:
+                self.escaped_enemies = max(0, self.escaped_enemies - 1)  # Zorg ervoor dat het niet onder 0 komt
+                tank.kill()  # Verwijder de tank
 
     def handle_enemy_actions(self):
         for enemy in list(self.enemies):
