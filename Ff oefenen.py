@@ -89,6 +89,10 @@ class Tank(pygame.sprite.Sprite):
                     global upgrade_points
                     upgrade_points += 1  # Earn an upgrade point
                     self.target.kill()
+        else:
+            # No target, move left
+            self.rect.x -= self.speed
+
 
     def draw_health_bar(self, screen):
         bar_width = 30
@@ -100,7 +104,7 @@ class Tank(pygame.sprite.Sprite):
         pygame.draw.rect(screen, bar_color, (self.rect.centerx - bar_width // 2, self.rect.top - 10, int(bar_width * health_ratio), bar_height))
 
 class Projectile(pygame.sprite.Sprite):
-    def __init__(self, x, y, target, damage):
+    def __init__(self, x, y, target, damage, shooter):
         super().__init__()
         self.image = pygame.image.load("SigaretKogel.png").convert_alpha()  
         self.image = pygame.transform.scale(self.image, (30, 30))
@@ -109,7 +113,7 @@ class Projectile(pygame.sprite.Sprite):
         self.target = target
         self.speed = 5
         self.damage = damage
-
+        self.shooter = shooter  # De tank die de kogel heeft afgeschoten
 
     def update(self):
         if self.target and self.target.alive():
@@ -125,11 +129,12 @@ class Projectile(pygame.sprite.Sprite):
             if self.rect.colliderect(self.target.rect):
                 self.target.health -= self.damage
                 if self.target.health <= 0:
+                    global upgrade_points
+                    upgrade_points += 1  # Verhoog upgradepunten
                     self.target.kill()
                 self.kill()  # Verwijder de kogel
         else:
             self.kill()  # Verwijder de kogel als er geen doelwit meer is
-
 
 # In de RangedTank klasse
 class RangedTank(Tank):
@@ -137,13 +142,13 @@ class RangedTank(Tank):
         super().__init__(x, y)
         self.image = pygame.image.load("LuckyLuke.png").convert_alpha()  
         self.image = pygame.transform.scale(self.image, (80, 100))
+        self.rect = self.image.get_rect(center=(x, y))  # Zorg ervoor dat de rect correct is ingesteld
         self.max_health = 50
         self.health = self.max_health
         self.damage = 34  # Dubbele schade ten opzichte van de gewone tank (stel dat gewone tank 10 heeft)
         self.range = 150
         self.cooldown = 750 # Tijd in milliseconden tussen schoten
         self.speed = 1  # Houd dezelfde snelheid
-
         self.last_shot_time = pygame.time.get_ticks()
 
     def draw_health_bar(self, screen):
@@ -156,7 +161,6 @@ class RangedTank(Tank):
         bar_y = self.rect.top - bar_height - 5
         pygame.draw.rect(screen, GRAY, (bar_x, bar_y, bar_width, bar_height))
         pygame.draw.rect(screen, bar_color, (bar_x, bar_y, int(bar_width * health_ratio), bar_height))
-
 
     def move_and_attack(self, projectiles_group):
         current_time = pygame.time.get_ticks()
@@ -173,15 +177,13 @@ class RangedTank(Tank):
 
             # Schiet als de vijand binnen bereik is
             elif distance <= self.range and current_time - self.last_shot_time >= self.cooldown:
-                projectile = Projectile(self.rect.centerx, self.rect.centery, self.target, self.damage)
+                projectile = Projectile(self.rect.centerx, self.rect.centery, self.target, self.damage, self)
                 projectiles_group.add(projectile)  # Voeg de kogel toe aan de groep projectielen
                 self.last_shot_time = current_time
-                if distance < 150:
-                    self.target.health -= self.damage
-                    global upgrade_points
-                    upgrade_points += 1  # Earn an upgrade point
-                    self.target.kill()
-
+        else:
+            # No target, move left
+            self.rect.x -= self.speed
+    
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, health, damage):
         super().__init__()
@@ -225,6 +227,40 @@ class Enemy(pygame.sprite.Sprite):
                     self.target.kill()
         else:
             self.rect.x += self.speed
+
+# Basiswaarden voor de EnemyRanger
+base_health_eranger = 50
+base_damage_eranger = 34
+
+class EnemyRanger(Enemy):
+    def __init__(self, x, y, speed, health_multiplier, damage_multiplier):
+        # Bereken de verhoogde gezondheid en schade voor deze golf
+        adjusted_health = base_health_eranger * health_multiplier
+        adjusted_damage = base_damage_eranger * damage_multiplier
+        super().__init__(x, y, speed, adjusted_health, adjusted_damage)
+        self.image = pygame.image.load("EnemyRanger.png").convert_alpha()
+        self.image = pygame.transform.scale(self.image, (60, 60))
+        self.range = 150
+        self.cooldown = 750  # Schiet elke 750 ms
+        self.last_shot_time = pygame.time.get_ticks()
+
+    def move_and_attack(self, projectiles_group):
+        current_time = pygame.time.get_ticks()
+        if self.target:
+            distance = math.hypot(self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery)
+            if distance > self.range:
+                dx, dy = self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery
+                if distance > 0:
+                    dx, dy = dx / distance, dy / distance
+                    self.rect.x += dx * self.speed
+                    self.rect.y += dy * self.speed
+            elif current_time - self.last_shot_time >= self.cooldown:
+                projectile = Projectile(self.rect.centerx, self.rect.centery, self.target, self.damage, self)
+                projectiles_group.add(projectile)
+                self.last_shot_time = current_time
+        else:
+            self.rect.x += self.speed
+
 
 class Button:
     def __init__(self, x, y, width, height, text, action):
@@ -273,9 +309,16 @@ class Game:
                 self.spawn_timer = pygame.time.get_ticks()
                 y = random.randint(PATH_TOP, PATH_BOTTOM)
                 speed = random.randint(2, 4) * self.enemy_speed_multiplier
-                health = ENEMY_HEALTH * self.enemy_health_multiplier
-                damage = ENEMY_DAMAGE * self.enemy_damage_multiplier
-                enemy = Enemy(0, y, speed, health, damage)
+                health_multiplier = self.enemy_health_multiplier
+                damage_multiplier = self.enemy_damage_multiplier
+
+                if self.wave >= 5 and random.random() < 0.3:  # 30% kans op een EnemyRanger
+                    enemy = EnemyRanger(0, y, speed, health_multiplier, damage_multiplier)
+                else:
+                    health = ENEMY_HEALTH * health_multiplier
+                    damage = ENEMY_DAMAGE * damage_multiplier
+                    enemy = Enemy(0, y, speed, health, damage)
+                
                 self.enemies.add(enemy)
                 self.spawned_enemies += 1
 
@@ -285,9 +328,10 @@ class Game:
             self.start_new_wave()
 
     def start_new_wave(self):
+        global base_hp_Eranger, base_damage_Eranger
         self.wave += 1
         self.enemy_health_multiplier += 0.2
-        self.enemy_damage_multiplier += 0.1
+        self.enemy_damage_multiplier += 0.2
         self.enemy_speed_multiplier += 0.1
         self.enemies_to_spawn += 3
         self.spawned_enemies = 0
@@ -317,18 +361,21 @@ class Game:
             else:
                 tank.move_and_attack()
 
-            # Controleer of een tank de linkerzijde bereikt
             if tank.rect.x <= -90:
                 self.escaped_enemies -= 1  # Verminder het aantal ontsnapte vijanden
-                tank.kill()  # Verwijder de tank
-            if tank.rect.x <= -90:
-                self.escaped_enemies = max(0, self.escaped_enemies - 1)  # Zorg ervoor dat het niet onder 0 komt
+                self.escaped_enemies = max(0, self.escaped_enemies)  # Zorg ervoor dat het niet onder 0 komt
                 tank.kill()  # Verwijder de tank
 
     def handle_enemy_actions(self):
         for enemy in list(self.enemies):
             enemy.find_target(self.tanks)
-            enemy.move_and_attack()
+            
+            # Controleer of het een EnemyRanger is
+            if isinstance(enemy, EnemyRanger):
+                enemy.move_and_attack(self.projectile)  # Geef projectiles_group mee
+            else:
+                enemy.move_and_attack()
+            
             if enemy.rect.x > SCREEN_WIDTH:
                 self.escaped_enemies += 1
                 enemy.kill()
@@ -486,5 +533,4 @@ def main_menu():
         clock.tick(FPS)
 
 if __name__ == "__main__":
-    main_menu()
-    
+    main_menu()   
