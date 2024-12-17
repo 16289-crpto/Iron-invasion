@@ -33,9 +33,11 @@ SKYBLUE = (22, 65, 124)
 GRAY = (128, 128, 128)
 
 # Upgrade Variables
-upgrade_points = 0
+upgrade_points = 100
 tank_damage_upgrade = 0
 tank_health_upgrade = 0
+ranged_tank_damage_upgrade = 0
+ranged_tank_health_upgrade = 0
 
 # Game setup
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -52,9 +54,9 @@ class Tank(pygame.sprite.Sprite):
         self.image = pygame.image.load("Father.png").convert_alpha()  
         self.image = pygame.transform.scale(self.image, (200, 120))
         self.rect = self.image.get_rect(center=(x, y))
-        self.max_health = BASE_TANK_HEALTH + tank_health_upgrade + 10  # Opslaan van maximale gezondheid
+        self.max_health = BASE_TANK_HEALTH + tank_health_upgrade * 10  # Opslaan van maximale gezondheid
         self.health = self.max_health
-        self.damage = BASE_TANK_DAMAGE + tank_damage_upgrade + 2
+        self.damage = BASE_TANK_DAMAGE + tank_damage_upgrade * 2
         self.speed = 2
         self.target = None
 
@@ -71,6 +73,28 @@ class Tank(pygame.sprite.Sprite):
             self.target = min(enemies, key=lambda enemy: math.hypot(self.rect.centerx - enemy.rect.centerx, self.rect.centery - enemy.rect.centery))
         else:
             self.target = None
+
+    def move_and_attack(self):
+        if self.target:
+            # Move towards target
+            dx, dy = self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery
+            distance = math.hypot(dx, dy)
+            if distance > 0:
+                dx, dy = dx / distance, dy / distance
+                self.rect.x += dx * self.speed
+                self.rect.y += dy * self.speed
+
+            # Attack if close enough
+            if distance < 20:
+                self.target.health -= self.damage
+                if self.target.health <= 0:
+                    if isinstance(self.target, Enemy):  # Alleen punten voor vijanden
+                        global upgrade_points
+                        upgrade_points += 1
+                    self.target.kill()
+        else:
+            # No target, move left
+            self.rect.x -= self.speed
 
     def move_and_attack(self):
         if self.target:
@@ -129,8 +153,9 @@ class Projectile(pygame.sprite.Sprite):
             if self.rect.colliderect(self.target.rect):
                 self.target.health -= self.damage
                 if self.target.health <= 0:
-                    global upgrade_points
-                    upgrade_points += 1  # Verhoog upgradepunten
+                    if isinstance(self.shooter, (Tank, RangedTank)) and isinstance(self.target, Enemy):
+                        global upgrade_points
+                        upgrade_points += 1  # Alleen als een tank een vijand doodt
                     self.target.kill()
                 self.kill()  # Verwijder de kogel
         else:
@@ -142,13 +167,13 @@ class RangedTank(Tank):
         super().__init__(x, y)
         self.image = pygame.image.load("LuckyLuke.png").convert_alpha()  
         self.image = pygame.transform.scale(self.image, (80, 100))
-        self.rect = self.image.get_rect(center=(x, y))  # Zorg ervoor dat de rect correct is ingesteld
-        self.max_health = 50
+        self.rect = self.image.get_rect(center=(x, y))  
+        self.max_health = 50 + ranged_tank_health_upgrade * 5
         self.health = self.max_health
-        self.damage = 34  # Dubbele schade ten opzichte van de gewone tank (stel dat gewone tank 10 heeft)
+        self.damage = 34 + ranged_tank_damage_upgrade * 3
         self.range = 150
-        self.cooldown = 750 # Tijd in milliseconden tussen schoten
-        self.speed = 1  # Houd dezelfde snelheid
+        self.cooldown = 750
+        self.speed = 1
         self.last_shot_time = pygame.time.get_ticks()
 
     def draw_health_bar(self, screen):
@@ -156,7 +181,6 @@ class RangedTank(Tank):
         bar_height = 5
         health_ratio = self.health / self.max_health
         bar_color = GREEN if health_ratio > 0.5 else RED
-        # Plaats de healthbar direct boven het midden van de afbeelding
         bar_x = self.rect.left + 20
         bar_y = self.rect.top - bar_height - 5
         pygame.draw.rect(screen, GRAY, (bar_x, bar_y, bar_width, bar_height))
@@ -452,50 +476,83 @@ class Game:
 
             pygame.display.flip()
             clock.tick(FPS)
-
 def upgrade_menu():
     global tank_damage_upgrade, tank_health_upgrade, upgrade_points
+    global ranged_tank_damage_upgrade, ranged_tank_health_upgrade
+    global damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost
 
-    damage_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Upgrade Damage (2 pts)", "damage")
-    health_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 50, "Upgrade Health (2 pts)", "health")
-    back_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Back", "back")
+    damage_upgrade_cost = 2
+    health_upgrade_cost = 2
+    ranged_damage_upgrade_cost = 2
+    ranged_health_upgrade_cost = 2
 
     while True:
-        screen.blit(lobby_image, (0, -200))  
+        screen.blit(lobby_image, (0, -200))
+
+        # Knoppen voor gewone tank
+        damage_button = Button(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 - 100, 200, 50, f"Tank Damage ({damage_upgrade_cost} pts)", "damage")
+        health_button = Button(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 - 30, 200, 50, f"Tank Health ({health_upgrade_cost} pts)", "health")
+
+        # Knoppen voor ranged tank
+        ranged_damage_button = Button(SCREEN_WIDTH // 2 + 50, SCREEN_HEIGHT // 2 - 100, 200, 50, f"Ranged Damage ({ranged_damage_upgrade_cost} pts)", "ranged_damage")
+        ranged_health_button = Button(SCREEN_WIDTH // 2 + 50, SCREEN_HEIGHT // 2 - 30, 200, 50, f"Ranged Health ({ranged_health_upgrade_cost} pts)", "ranged_health")
+
+        # Back button
+        back_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Back", "back")
+
         # Event handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if damage_button.is_clicked(event.pos) and upgrade_points >= 2:
+                # Upgrades voor gewone tank
+                if damage_button.is_clicked(event.pos) and upgrade_points >= damage_upgrade_cost:
                     tank_damage_upgrade += 1
-                    upgrade_points -= 2
-                elif health_button.is_clicked(event.pos) and upgrade_points >= 2:
+                    upgrade_points -= damage_upgrade_cost
+                    damage_upgrade_cost += 2
+                elif health_button.is_clicked(event.pos) and upgrade_points >= health_upgrade_cost:
                     tank_health_upgrade += 1
-                    upgrade_points -= 2
+                    upgrade_points -= health_upgrade_cost
+                    health_upgrade_cost += 2
+
+                # Upgrades voor ranged tank
+                elif ranged_damage_button.is_clicked(event.pos) and upgrade_points >= ranged_damage_upgrade_cost:
+                    ranged_tank_damage_upgrade += 1
+                    upgrade_points -= ranged_damage_upgrade_cost
+                    ranged_damage_upgrade_cost += 2
+                elif ranged_health_button.is_clicked(event.pos) and upgrade_points >= ranged_health_upgrade_cost:
+                    ranged_tank_health_upgrade += 1
+                    upgrade_points -= ranged_health_upgrade_cost
+                    ranged_health_upgrade_cost += 2
+
+                # Back naar het hoofdmenu
                 elif back_button.is_clicked(event.pos):
                     return
 
-        # Draw buttons
+        # Knoppen tekenen
         damage_button.draw(screen)
         health_button.draw(screen)
+        ranged_damage_button.draw(screen)
+        ranged_health_button.draw(screen)
         back_button.draw(screen)
 
-        # Draw upgrade status
+        # Status tonen
         total_damage = BASE_TANK_DAMAGE + tank_damage_upgrade * 2
         total_health = BASE_TANK_HEALTH + tank_health_upgrade * 10
+        ranged_total_damage = 34 + ranged_tank_damage_upgrade * 3
+        ranged_total_health = 50 + ranged_tank_health_upgrade * 5
 
         status_text = FONT.render(f"Upgrade Points: {upgrade_points}", True, WHITE)
-        damage_text = FONT.render(f"Total Damage: {total_damage}", True, WHITE)
-        health_text = FONT.render(f"Total Health: {total_health}", True, WHITE)
+        tank_stats_text = FONT.render(f"Tank - Damage: {total_damage}, Health: {total_health}", True, WHITE)
+        ranged_stats_text = FONT.render(f"Ranged Tank - Damage: {ranged_total_damage}, Health: {ranged_total_health}", True, WHITE)
 
         screen.blit(status_text, (10, 10))
-        screen.blit(damage_text, (10, 50))
-        screen.blit(health_text, (10, 90))
+        screen.blit(tank_stats_text, (10, 50))
+        screen.blit(ranged_stats_text, (10, 90))
 
         pygame.display.flip()
-        clock.tick(FPS)
+
 
 def main_menu():
     start_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Start Game", "start")
