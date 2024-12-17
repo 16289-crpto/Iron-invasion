@@ -33,7 +33,7 @@ SKYBLUE = (22, 65, 124)
 GRAY = (128, 128, 128)
 
 # Upgrade Variables
-upgrade_points = 0
+upgrade_points = 7
 tank_damage_upgrade = 0
 tank_health_upgrade = 0
 
@@ -52,9 +52,9 @@ class Tank(pygame.sprite.Sprite):
         self.image = pygame.image.load("Father.png").convert_alpha()  
         self.image = pygame.transform.scale(self.image, (200, 120))
         self.rect = self.image.get_rect(center=(x, y))
-        self.max_health = BASE_TANK_HEALTH + tank_health_upgrade + 10  # Opslaan van maximale gezondheid
+        self.max_health = BASE_TANK_HEALTH + tank_health_upgrade * 10  # Opslaan van maximale gezondheid
         self.health = self.max_health
-        self.damage = BASE_TANK_DAMAGE + tank_damage_upgrade + 2
+        self.damage = BASE_TANK_DAMAGE + tank_damage_upgrade * 2
         self.speed = 2
         self.target = None
 
@@ -264,7 +264,9 @@ class EnemyRanger(Enemy):
 
 class Button:
     def __init__(self, x, y, width, height, text, action):
-        self.rect = pygame.Rect(x, y, width, height)
+        text_surface = FONT.render(text, True, WHITE)
+        text_width = text_surface.get_width() + 20  # Voeg padding toe
+        self.rect = pygame.Rect(x, y, max(width, text_width), height)  # Zorg dat de breedte de tekst past
         self.color = SKYBLUE
         self.text = text
         self.action = action
@@ -455,11 +457,14 @@ class Game:
 
 def upgrade_menu():
     global tank_damage_upgrade, tank_health_upgrade, upgrade_points
+    
+    damage_upgrade_price = 2
+    health_upgrade_price = 2
 
     damage_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Upgrade Damage (2 pts)", "damage")
     health_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 50, "Upgrade Health (2 pts)", "health")
     back_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Back", "back")
-
+    
     while True:
         screen.blit(lobby_image, (0, -200))  
         # Event handling
@@ -468,12 +473,14 @@ def upgrade_menu():
                 pygame.quit()
                 quit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if damage_button.is_clicked(event.pos) and upgrade_points >= 2:
+                if damage_button.is_clicked(event.pos) and upgrade_points >= damage_upgrade_price:
                     tank_damage_upgrade += 1
-                    upgrade_points -= 2
-                elif health_button.is_clicked(event.pos) and upgrade_points >= 2:
+                    upgrade_points -= damage_upgrade_price
+                    damage_upgrade_price += 2
+                elif health_button.is_clicked(event.pos) and upgrade_points >= health_upgrade_price:
                     tank_health_upgrade += 1
-                    upgrade_points -= 2
+                    upgrade_points -= health_upgrade_price
+                    health_upgrade_price += 2
                 elif back_button.is_clicked(event.pos):
                     return
 
