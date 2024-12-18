@@ -18,6 +18,7 @@ ENEMY_DAMAGE = 10
 ENEMY_HEALTH = 100
 MAX_ESCAPED_ENEMIES = 10
 FONT = pygame.font.Font(None, 36)
+FONTTITLE = pygame.font.Font(None, 80)
 RESOURCE_GENERATION_INTERVAL = 1000  # 1 second
 
 # Colors
@@ -27,13 +28,16 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 DARKGREEN = (0, 100, 0,)
 BLUE = (0, 0, 255)
-SKYBLUE = (135, 206, 235)
+DARKBLUE = (0, 18, 154)
+SKYBLUE = (22, 65, 124)
 GRAY = (128, 128, 128)
 
 # Upgrade Variables
-upgrade_points = 0
+upgrade_points = 100
 tank_damage_upgrade = 0
 tank_health_upgrade = 0
+ranged_tank_damage_upgrade = 0
+ranged_tank_health_upgrade = 0
 
 # Game setup
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -41,6 +45,27 @@ clock = pygame.time.Clock()
 
 # Load background image
 background_image = pygame.image.load("background.png").convert()
+lobby_image= pygame.image.load("SterrenAchtergrond.png").convert()
+
+#scores opslaan
+def save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade): 
+    with open('saved.txt', 'w') as f:
+        f.write(f"Upgrade points: {upgrade_points}\n")
+        f.write(f"Damage: {tank_damage_upgrade}\n")
+        f.write(f"Health: {tank_health_upgrade}")
+
+def load_stats(): 
+    with open('saved.txt', 'r') as f:
+        inhoud = f.read()
+        inhoud = inhoud.split("\n")
+        upgrade_points = int(inhoud[0].split(":")[1].strip())
+        tank_damage_upgrade = int(inhoud[1].split(":")[1].strip())
+        tank_health_upgrade = int(inhoud[2].split(":")[1].strip())
+        return upgrade_points, tank_damage_upgrade, tank_health_upgrade
+
+def test_load_stats():
+    result = load_stats()
+    print("Result from load_stats:", result)
 
 #scores opslaan
 def save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade): 
@@ -69,9 +94,9 @@ class Tank(pygame.sprite.Sprite):
         self.image = pygame.image.load("Father.png").convert_alpha()  
         self.image = pygame.transform.scale(self.image, (200, 120))
         self.rect = self.image.get_rect(center=(x, y))
-        self.max_health = BASE_TANK_HEALTH + tank_health_upgrade + 10  # Opslaan van maximale gezondheid
+        self.max_health = BASE_TANK_HEALTH + tank_health_upgrade * 10  # Opslaan van maximale gezondheid
         self.health = self.max_health
-        self.damage = BASE_TANK_DAMAGE + tank_damage_upgrade + 2
+        self.damage = BASE_TANK_DAMAGE + tank_damage_upgrade * 2
         self.speed = 2
         self.target = None
 
@@ -103,9 +128,35 @@ class Tank(pygame.sprite.Sprite):
             if distance < 20:
                 self.target.health -= self.damage
                 if self.target.health <= 0:
+                    if isinstance(self.target, Enemy):  # Alleen punten voor vijanden
+                        global upgrade_points
+                        upgrade_points += 1
+                    self.target.kill()
+        else:
+            # No target, move left
+            self.rect.x -= self.speed
+
+    def move_and_attack(self):
+        if self.target:
+            # Move towards target
+            dx, dy = self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery
+            distance = math.hypot(dx, dy)
+            if distance > 0:
+                dx, dy = dx / distance, dy / distance
+                self.rect.x += dx * self.speed
+                self.rect.y += dy * self.speed
+
+            # Attack if close enough
+            if distance < 20:
+                self.target.health -= self.damage
+                if self.target.health <= 0:
                     global upgrade_points
                     upgrade_points += 1  # Earn an upgrade point
                     self.target.kill()
+        else:
+            # No target, move left
+            self.rect.x -= self.speed
+
 
     def draw_health_bar(self, screen):
         bar_width = 30
@@ -117,17 +168,19 @@ class Tank(pygame.sprite.Sprite):
         pygame.draw.rect(screen, bar_color, (self.rect.centerx - bar_width // 2, self.rect.top - 10, int(bar_width * health_ratio), bar_height))
 
 class Projectile(pygame.sprite.Sprite):
-    def __init__(self, x, y, target, damage):
+    def __init__(self, x, y, target, damage, shooter):
         super().__init__()
-        self.image = pygame.Surface((10, 10))
-        self.image.fill(WHITE)  # Kleur van de kogel
-        self.rect = self.image.get_rect(center=(x, y))
+        self.image = pygame.image.load("SigaretKogel.png").convert_alpha()  
+        self.image = pygame.transform.scale(self.image, (30, 30))
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)  # Stel de startpositie in
         self.target = target
         self.speed = 5
         self.damage = damage
+        self.shooter = shooter  # De tank die de kogel heeft afgeschoten
 
     def update(self):
-        if self.target:
+        if self.target and self.target.alive():
             # Beweeg de kogel richting de vijand
             dx, dy = self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery
             distance = math.hypot(dx, dy)
@@ -140,6 +193,9 @@ class Projectile(pygame.sprite.Sprite):
             if self.rect.colliderect(self.target.rect):
                 self.target.health -= self.damage
                 if self.target.health <= 0:
+                    if isinstance(self.shooter, (Tank, RangedTank)) and isinstance(self.target, Enemy):
+                        global upgrade_points
+                        upgrade_points += 1  # Alleen als een tank een vijand doodt
                     self.target.kill()
                 self.kill()  # Verwijder de kogel
         else:
@@ -149,23 +205,26 @@ class Projectile(pygame.sprite.Sprite):
 class RangedTank(Tank):
     def __init__(self, x, y):
         super().__init__(x, y)
-        self.image.fill(SKYBLUE)  # Unieke kleur voor Ranged Tank
-        self.max_health = 50
+        self.image = pygame.image.load("LuckyLuke.png").convert_alpha()  
+        self.image = pygame.transform.scale(self.image, (80, 100))
+        self.rect = self.image.get_rect(center=(x, y))  
+        self.max_health = 50 + ranged_tank_health_upgrade * 5
         self.health = self.max_health
-        self.damage = 50  # Dubbele schade ten opzichte van de gewone tank (stel dat gewone tank 10 heeft)
+        self.damage = 34 + ranged_tank_damage_upgrade * 3
         self.range = 150
-        self.cooldown = 750  # Tijd in milliseconden tussen schoten
-        self.speed = 1  # Houd dezelfde snelheid
-
+        self.cooldown = 750
+        self.speed = 1
         self.last_shot_time = pygame.time.get_ticks()
 
     def draw_health_bar(self, screen):
-        bar_width = 30
+        bar_width = 40
         bar_height = 5
         health_ratio = self.health / self.max_health
         bar_color = GREEN if health_ratio > 0.5 else RED
-        pygame.draw.rect(screen, GRAY, (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
-        pygame.draw.rect(screen, bar_color, (self.rect.centerx - bar_width // 2, self.rect.top - 10, int(bar_width * health_ratio), bar_height))
+        bar_x = self.rect.left + 20
+        bar_y = self.rect.top - bar_height - 5
+        pygame.draw.rect(screen, GRAY, (bar_x, bar_y, bar_width, bar_height))
+        pygame.draw.rect(screen, bar_color, (bar_x, bar_y, int(bar_width * health_ratio), bar_height))
 
     def move_and_attack(self, projectiles_group):
         current_time = pygame.time.get_ticks()
@@ -182,10 +241,13 @@ class RangedTank(Tank):
 
             # Schiet als de vijand binnen bereik is
             elif distance <= self.range and current_time - self.last_shot_time >= self.cooldown:
-                projectile = Projectile(self.rect.centerx, self.rect.centery, self.target, self.damage)
+                projectile = Projectile(self.rect.centerx, self.rect.centery, self.target, self.damage, self)
                 projectiles_group.add(projectile)  # Voeg de kogel toe aan de groep projectielen
                 self.last_shot_time = current_time
-
+        else:
+            # No target, move left
+            self.rect.x -= self.speed
+    
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, health, damage):
         super().__init__()
@@ -230,10 +292,44 @@ class Enemy(pygame.sprite.Sprite):
         else:
             self.rect.x += self.speed
 
+# Basiswaarden voor de EnemyRanger
+base_health_eranger = 50
+base_damage_eranger = 34
+
+class EnemyRanger(Enemy):
+    def __init__(self, x, y, speed, health_multiplier, damage_multiplier):
+        # Bereken de verhoogde gezondheid en schade voor deze golf
+        adjusted_health = base_health_eranger * health_multiplier
+        adjusted_damage = base_damage_eranger * damage_multiplier
+        super().__init__(x, y, speed, adjusted_health, adjusted_damage)
+        self.image = pygame.image.load("EnemyRanger.png").convert_alpha()
+        self.image = pygame.transform.scale(self.image, (60, 60))
+        self.range = 150
+        self.cooldown = 750  # Schiet elke 750 ms
+        self.last_shot_time = pygame.time.get_ticks()
+
+    def move_and_attack(self, projectiles_group):
+        current_time = pygame.time.get_ticks()
+        if self.target:
+            distance = math.hypot(self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery)
+            if distance > self.range:
+                dx, dy = self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery
+                if distance > 0:
+                    dx, dy = dx / distance, dy / distance
+                    self.rect.x += dx * self.speed
+                    self.rect.y += dy * self.speed
+            elif current_time - self.last_shot_time >= self.cooldown:
+                projectile = Projectile(self.rect.centerx, self.rect.centery, self.target, self.damage, self)
+                projectiles_group.add(projectile)
+                self.last_shot_time = current_time
+        else:
+            self.rect.x += self.speed
+
+
 class Button:
     def __init__(self, x, y, width, height, text, action):
         self.rect = pygame.Rect(x, y, width, height)
-        self.color = GRAY
+        self.color = SKYBLUE
         self.text = text
         self.action = action
 
@@ -286,9 +382,16 @@ class Game:
                 self.spawn_timer = pygame.time.get_ticks()
                 y = random.randint(PATH_TOP, PATH_BOTTOM)
                 speed = random.randint(2, 4) * self.enemy_speed_multiplier
-                health = ENEMY_HEALTH * self.enemy_health_multiplier
-                damage = ENEMY_DAMAGE * self.enemy_damage_multiplier
-                enemy = Enemy(0, y, speed, health, damage)
+                health_multiplier = self.enemy_health_multiplier
+                damage_multiplier = self.enemy_damage_multiplier
+
+                if self.wave >= 5 and random.random() < 0.3:  # 30% kans op een EnemyRanger
+                    enemy = EnemyRanger(0, y, speed, health_multiplier, damage_multiplier)
+                else:
+                    health = ENEMY_HEALTH * health_multiplier
+                    damage = ENEMY_DAMAGE * damage_multiplier
+                    enemy = Enemy(0, y, speed, health, damage)
+                
                 self.enemies.add(enemy)
                 self.spawned_enemies += 1
 
@@ -298,6 +401,7 @@ class Game:
             self.start_new_wave()
 
     def start_new_wave(self):
+        global base_hp_Eranger, base_damage_Eranger
         self.wave += 1
         self.enemy_health_multiplier += 0.2
         self.enemy_damage_multiplier += 0.2
@@ -323,18 +427,28 @@ class Game:
             self.resources -= TANK_COST
 
     def handle_tank_actions(self):
-        for tank in self.tanks:
+        for tank in list(self.tanks):
             tank.find_target(self.enemies)
             if isinstance(tank, RangedTank):
                 tank.move_and_attack(self.projectile)  # Geef de groep projectielen door
             else:
                 tank.move_and_attack()
 
+            if tank.rect.x <= -90:
+                self.escaped_enemies -= 1  # Verminder het aantal ontsnapte vijanden
+                self.escaped_enemies = max(0, self.escaped_enemies)  # Zorg ervoor dat het niet onder 0 komt
+                tank.kill()  # Verwijder de tank
 
     def handle_enemy_actions(self):
         for enemy in list(self.enemies):
             enemy.find_target(self.tanks)
-            enemy.move_and_attack()
+            
+            # Controleer of het een EnemyRanger is
+            if isinstance(enemy, EnemyRanger):
+                enemy.move_and_attack(self.projectile)  # Geef projectiles_group mee
+            else:
+                enemy.move_and_attack()
+            
             if enemy.rect.x > SCREEN_WIDTH:
                 self.escaped_enemies += 1
                 enemy.kill()
@@ -357,14 +471,17 @@ class Game:
         return False
 
     def game_over_screen(self):
-        screen.fill(BLACK)
+        screen.blit(lobby_image, (0, -200)) 
         global upgrade_points
-        game_over_text = FONT.render("Game Over!", True, RED)
+        game_over_text = FONTTITLE.render("Game Over!", True, RED)
+        game_over_rect = game_over_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
         points_text = FONT.render(f"You earned {upgrade_points} upgrade points!", True, WHITE)
-        screen.blit(game_over_text, (SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50))
-        screen.blit(points_text, (SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2))
+        points_rect = points_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20))
+        screen.blit(game_over_text, game_over_rect)
+        screen.blit(points_text, points_rect)
         pygame.display.flip()
-        pygame.time.delay(3000)  # Wait for 3 seconds before returning to main menu
+        pygame.time.delay(3000)
+        main_menu()
 
     def run(self):
         running = True
@@ -408,14 +525,29 @@ class Game:
 
             pygame.display.flip()
             clock.tick(FPS)
+def upgrade_menu():
+    global tank_damage_upgrade, tank_health_upgrade, upgrade_points
+    global ranged_tank_damage_upgrade, ranged_tank_health_upgrade
+    global damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost
 
-def upgrade_menu(tank_damage_upgrade, tank_health_upgrade, upgrade_points):
-    damage_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Upgrade Damage (2 pts)", "damage")
-    health_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 50, "Upgrade Health (2 pts)", "health")
-    back_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Back", "back")
+    damage_upgrade_cost = 2
+    health_upgrade_cost = 2
+    ranged_damage_upgrade_cost = 2
+    ranged_health_upgrade_cost = 2
 
     while True:
-        screen.fill(BLACK)
+        screen.blit(lobby_image, (0, -200))
+
+        # Knoppen voor gewone tank
+        damage_button = Button(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 - 100, 200, 50, f"Tank Damage ({damage_upgrade_cost} pts)", "damage")
+        health_button = Button(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 - 30, 200, 50, f"Tank Health ({health_upgrade_cost} pts)", "health")
+
+        # Knoppen voor ranged tank
+        ranged_damage_button = Button(SCREEN_WIDTH // 2 + 50, SCREEN_HEIGHT // 2 - 100, 200, 50, f"Ranged Damage ({ranged_damage_upgrade_cost} pts)", "ranged_damage")
+        ranged_health_button = Button(SCREEN_WIDTH // 2 + 50, SCREEN_HEIGHT // 2 - 30, 200, 50, f"Ranged Health ({ranged_health_upgrade_cost} pts)", "ranged_health")
+
+        # Back button
+        back_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Back", "back")
 
         # Event handling
         for event in pygame.event.get():
@@ -423,41 +555,60 @@ def upgrade_menu(tank_damage_upgrade, tank_health_upgrade, upgrade_points):
                 pygame.quit()
                 quit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if damage_button.is_clicked(event.pos) and upgrade_points >= 2:
+                # Upgrades voor gewone tank
+                if damage_button.is_clicked(event.pos) and upgrade_points >= damage_upgrade_cost:
                     tank_damage_upgrade += 1
-                    upgrade_points -= 2
-                elif health_button.is_clicked(event.pos) and upgrade_points >= 2:
+                    upgrade_points -= damage_upgrade_cost
+                    damage_upgrade_cost += 2
+                elif health_button.is_clicked(event.pos) and upgrade_points >= health_upgrade_cost:
                     tank_health_upgrade += 1
-                    upgrade_points -= 2
+                    upgrade_points -= health_upgrade_cost
+                    health_upgrade_cost += 2
+
+                # Upgrades voor ranged tank
+                elif ranged_damage_button.is_clicked(event.pos) and upgrade_points >= ranged_damage_upgrade_cost:
+                    ranged_tank_damage_upgrade += 1
+                    upgrade_points -= ranged_damage_upgrade_cost
+                    ranged_damage_upgrade_cost += 2
+                elif ranged_health_button.is_clicked(event.pos) and upgrade_points >= ranged_health_upgrade_cost:
+                    ranged_tank_health_upgrade += 1
+                    upgrade_points -= ranged_health_upgrade_cost
+                    ranged_health_upgrade_cost += 2
+
+                # Back naar het hoofdmenu
                 elif back_button.is_clicked(event.pos):
                     return
                 save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade)
 
-        # Draw buttons
+        # Knoppen tekenen
         damage_button.draw(screen)
         health_button.draw(screen)
+        ranged_damage_button.draw(screen)
+        ranged_health_button.draw(screen)
         back_button.draw(screen)
 
-        # Draw upgrade status
+        # Status tonen
         total_damage = BASE_TANK_DAMAGE + tank_damage_upgrade * 2
         total_health = BASE_TANK_HEALTH + tank_health_upgrade * 10
+        ranged_total_damage = 34 + ranged_tank_damage_upgrade * 3
+        ranged_total_health = 50 + ranged_tank_health_upgrade * 5
 
         status_text = FONT.render(f"Upgrade Points: {upgrade_points}", True, WHITE)
-        damage_text = FONT.render(f"Total Damage: {total_damage}", True, WHITE)
-        health_text = FONT.render(f"Total Health: {total_health}", True, WHITE)
+        tank_stats_text = FONT.render(f"Tank - Damage: {total_damage}, Health: {total_health}", True, WHITE)
+        ranged_stats_text = FONT.render(f"Ranged Tank - Damage: {ranged_total_damage}, Health: {ranged_total_health}", True, WHITE)
 
         screen.blit(status_text, (10, 10))
-        screen.blit(damage_text, (10, 50))
-        screen.blit(health_text, (10, 90))
+        screen.blit(tank_stats_text, (10, 50))
+        screen.blit(ranged_stats_text, (10, 90))
 
         pygame.display.flip()
-        clock.tick(FPS)
+
 
 def main_menu():
     start_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Start Game", "start")
     upgrade_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 50, "Upgrades", "upgrades")
-    quit_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Quit", "quit") 
-
+    quit_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Quit", "quit")
+    screen.blit(lobby_image, (0, -200)) 
     while True:
         screen.fill(BLACK)
         # Event handling
@@ -488,7 +639,7 @@ def main_menu():
         quit_button.draw(screen)
 
         # Draw title
-        title_text = FONT.render("Iron Invasion", True, WHITE)
+        title_text = FONTTITLE.render("Iron Invasion", True, WHITE)
         title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 150))
         screen.blit(title_text, title_rect)
 
@@ -496,4 +647,4 @@ def main_menu():
         clock.tick(FPS)
 
 if __name__ == "__main__":
-    main_menu()
+    main_menu()   
