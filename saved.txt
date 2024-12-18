@@ -1,0 +1,3 @@
+Upgrade points: 0
+Damage: 0
+Health: 0
