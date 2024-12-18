@@ -8,8 +8,8 @@ pygame.init()
 # Constants
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-PATH_TOP = SCREEN_HEIGHT - 200
-PATH_BOTTOM = SCREEN_HEIGHT - 50
+PATH_TOP = SCREEN_HEIGHT - 225
+PATH_BOTTOM = SCREEN_HEIGHT - 75
 FPS = 60
 TANK_COST = 50
 BASE_TANK_DAMAGE = 10
@@ -33,9 +33,14 @@ SKYBLUE = (22, 65, 124)
 GRAY = (128, 128, 128)
 
 # Upgrade Variables
-upgrade_points = 7
+upgrade_points = 350
 tank_damage_upgrade = 0
 tank_health_upgrade = 0
+ranged_tank_damage_upgrade = 0
+ranged_tank_health_upgrade = 0
+
+# Voeg dit toe aan het begin van je script
+ranger_unlocked = False
 
 # Game setup
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -71,6 +76,28 @@ class Tank(pygame.sprite.Sprite):
             self.target = min(enemies, key=lambda enemy: math.hypot(self.rect.centerx - enemy.rect.centerx, self.rect.centery - enemy.rect.centery))
         else:
             self.target = None
+
+    def move_and_attack(self):
+        if self.target:
+            # Move towards target
+            dx, dy = self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery
+            distance = math.hypot(dx, dy)
+            if distance > 0:
+                dx, dy = dx / distance, dy / distance
+                self.rect.x += dx * self.speed
+                self.rect.y += dy * self.speed
+
+            # Attack if close enough
+            if distance < 20:
+                self.target.health -= self.damage
+                if self.target.health <= 0:
+                    if isinstance(self.target, Enemy):  # Alleen punten voor vijanden
+                        global upgrade_points
+                        upgrade_points += 1
+                    self.target.kill()
+        else:
+            # No target, move left
+            self.rect.x -= self.speed
 
     def move_and_attack(self):
         if self.target:
@@ -129,8 +156,9 @@ class Projectile(pygame.sprite.Sprite):
             if self.rect.colliderect(self.target.rect):
                 self.target.health -= self.damage
                 if self.target.health <= 0:
-                    global upgrade_points
-                    upgrade_points += 1  # Verhoog upgradepunten
+                    if isinstance(self.shooter, (Tank, RangedTank)) and isinstance(self.target, Enemy):
+                        global upgrade_points
+                        upgrade_points += 1  # Alleen als een tank een vijand doodt
                     self.target.kill()
                 self.kill()  # Verwijder de kogel
         else:
@@ -142,13 +170,13 @@ class RangedTank(Tank):
         super().__init__(x, y)
         self.image = pygame.image.load("LuckyLuke.png").convert_alpha()  
         self.image = pygame.transform.scale(self.image, (80, 100))
-        self.rect = self.image.get_rect(center=(x, y))  # Zorg ervoor dat de rect correct is ingesteld
-        self.max_health = 50
+        self.rect = self.image.get_rect(center=(x, y))  
+        self.max_health = 50 + ranged_tank_health_upgrade * 5
         self.health = self.max_health
-        self.damage = 34  # Dubbele schade ten opzichte van de gewone tank (stel dat gewone tank 10 heeft)
+        self.damage = 34 + ranged_tank_damage_upgrade * 3
         self.range = 150
-        self.cooldown = 750 # Tijd in milliseconden tussen schoten
-        self.speed = 1  # Houd dezelfde snelheid
+        self.cooldown = 750
+        self.speed = 1
         self.last_shot_time = pygame.time.get_ticks()
 
     def draw_health_bar(self, screen):
@@ -156,7 +184,6 @@ class RangedTank(Tank):
         bar_height = 5
         health_ratio = self.health / self.max_health
         bar_color = GREEN if health_ratio > 0.5 else RED
-        # Plaats de healthbar direct boven het midden van de afbeelding
         bar_x = self.rect.left + 20
         bar_y = self.rect.top - bar_height - 5
         pygame.draw.rect(screen, GRAY, (bar_x, bar_y, bar_width, bar_height))
@@ -264,9 +291,7 @@ class EnemyRanger(Enemy):
 
 class Button:
     def __init__(self, x, y, width, height, text, action):
-        text_surface = FONT.render(text, True, WHITE)
-        text_width = text_surface.get_width() + 20  # Voeg padding toe
-        self.rect = pygame.Rect(x, y, max(width, text_width), height)  # Zorg dat de breedte de tekst past
+        self.rect = pygame.Rect(x, y, width, height)
         self.color = SKYBLUE
         self.text = text
         self.action = action
@@ -296,9 +321,8 @@ class Game:
         self.enemy_damage_multiplier = 1.0
         self.enemy_speed_multiplier = 1.0
         self.projectile = pygame.sprite.Group()  # Groep voor alle projectielen
-        self.tank_button = Button(SCREEN_WIDTH - 150, SCREEN_HEIGHT - 100, 140, 40, "Place Tank", lambda: self.place_tank())
-        self.ranged_tank_button = Button(SCREEN_WIDTH - 150, SCREEN_HEIGHT - 50, 140, 40, "Place Ranged", lambda: self.place_ranged_tank())
-
+        self.tank_button = Button(SCREEN_WIDTH - 150, SCREEN_HEIGHT - 50, 140, 40, "Place Tank", lambda: self.place_tank())
+        self.ranged_tank_button = Button(SCREEN_WIDTH - 350, SCREEN_HEIGHT - 50, 180, 40, "Place Ranged", lambda: self.place_ranged_tank())
 
     def generate_resources(self):
         if pygame.time.get_ticks() - self.resource_timer > RESOURCE_GENERATION_INTERVAL:
@@ -340,6 +364,9 @@ class Game:
         self.wave_active = True
 
     def place_ranged_tank(self):
+        global ranger_unlocked
+        if not ranger_unlocked:
+            return  # Ranger kan niet worden geplaatst als deze niet is ontgrendeld
         if self.resources >= TANK_COST:
             x = random.randint(SCREEN_WIDTH - 100, SCREEN_WIDTH - 40)
             y = random.randint(PATH_TOP, PATH_BOTTOM)
@@ -391,8 +418,11 @@ class Game:
         screen.blit(upgrade_points_text, (10, 50))
         screen.blit(wave_text, (10, 90))
         screen.blit(escaped_text, (10, 130))
-        self.tank_button.draw(screen)
-        self.ranged_tank_button.draw(screen)
+        self.tank_button.draw(screen)  # Teken de standaard tank-knop
+
+        # Controleer of de ranger is ontgrendeld voordat de knop wordt weergegeven
+        if ranger_unlocked:
+            self.ranged_tank_button.draw(screen)
 
     def check_game_over(self):
         if self.escaped_enemies >= MAX_ESCAPED_ENEMIES:
@@ -404,7 +434,7 @@ class Game:
         global upgrade_points
         game_over_text = FONTTITLE.render("Game Over!", True, RED)
         game_over_rect = game_over_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
-        points_text = FONT.render(f"You earned {upgrade_points} upgrade points!", True, WHITE)
+        points_text = FONT.render(f"You have a total of {upgrade_points} upgrade points!", True, WHITE)
         points_rect = points_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20))
         screen.blit(game_over_text, game_over_rect)
         screen.blit(points_text, points_rect)
@@ -454,55 +484,114 @@ class Game:
 
             pygame.display.flip()
             clock.tick(FPS)
-
 def upgrade_menu():
     global tank_damage_upgrade, tank_health_upgrade, upgrade_points
-    
-    damage_upgrade_price = 2
-    health_upgrade_price = 2
+    global ranged_tank_damage_upgrade, ranged_tank_health_upgrade
+    global damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost
+    global ranger_unlocked
 
-    damage_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Upgrade Damage (2 pts)", "damage")
-    health_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 50, "Upgrade Health (2 pts)", "health")
-    back_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Back", "back")
-    
+    damage_upgrade_cost = 2
+    health_upgrade_cost = 2
+    ranged_damage_upgrade_cost = 2
+    ranged_health_upgrade_cost = 2
+
+    # Ranger ontgrendelstatus
+    ranger_unlock_cost = 100
+    ranger_unlocked = ranger_unlocked if 'ranger_unlocked' in globals() else False
+
     while True:
-        screen.blit(lobby_image, (0, -200))  
+        screen.blit(lobby_image, (0, -200))
+
+        # Dynamisch knopbreedte aanpassen aan de tekstlengte
+        def create_dynamic_button(x, y, base_width, height, text, action, adjust_x=True, center=False):
+            rendered_text = FONT.render(text, True, WHITE)
+            text_width = rendered_text.get_width()
+            button_width = max(base_width, text_width + 20)  # Minimaal base_width, anders tekstbreedte + padding
+            button_x = x
+            if adjust_x:  # Positie aanpassen aan de breedte
+                button_x = x - (button_width - base_width) // 2
+            if center:  # Centraal uitlijnen als vereist
+                button_x = x - button_width // 2
+            return Button(button_x, y, button_width, height, text, action)
+
+        # Knoppen voor gewone tank
+        damage_button = create_dynamic_button(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 - 100, 200, 50, f"Tank Damage ({damage_upgrade_cost} pts)", "damage", adjust_x=True)
+        health_button = create_dynamic_button(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 - 30, 200, 50, f"Tank Health ({health_upgrade_cost} pts)", "health", adjust_x=True)
+
+        # Knoppen voor ranged tank
+        ranged_damage_button = create_dynamic_button(SCREEN_WIDTH // 2 + 50, SCREEN_HEIGHT // 2 - 100, 200, 50, f"Ranged Damage ({ranged_damage_upgrade_cost} pts)", "ranged_damage", adjust_x=True)
+        ranged_health_button = create_dynamic_button(SCREEN_WIDTH // 2 + 50, SCREEN_HEIGHT // 2 - 30, 200, 50, f"Ranged Health ({ranged_health_upgrade_cost} pts)", "ranged_health", adjust_x=True)
+
+        # Ranger ontgrendelen
+        unlock_ranger_button = None
+        if not ranger_unlocked:
+            unlock_ranger_button = create_dynamic_button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100, 300, 50, f"Unlock Ranger ({ranger_unlock_cost} pts)", "unlock_ranger", center=True)
+
+        # Back button gecentreerd
+        back_button = create_dynamic_button(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 200, 200, 50, "Back", "back", center=True)
+
         # Event handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if damage_button.is_clicked(event.pos) and upgrade_points >= damage_upgrade_price:
+                # Upgrades voor gewone tank
+                if damage_button.is_clicked(event.pos) and upgrade_points >= damage_upgrade_cost:
                     tank_damage_upgrade += 1
-                    upgrade_points -= damage_upgrade_price
-                    damage_upgrade_price += 2
-                elif health_button.is_clicked(event.pos) and upgrade_points >= health_upgrade_price:
+                    upgrade_points -= damage_upgrade_cost
+                    damage_upgrade_cost += 2
+                elif health_button.is_clicked(event.pos) and upgrade_points >= health_upgrade_cost:
                     tank_health_upgrade += 1
-                    upgrade_points -= health_upgrade_price
-                    health_upgrade_price += 2
+                    upgrade_points -= health_upgrade_cost
+                    health_upgrade_cost += 2
+
+                # Upgrades voor ranged tank
+                elif ranged_damage_button.is_clicked(event.pos) and upgrade_points >= ranged_damage_upgrade_cost:
+                    ranged_tank_damage_upgrade += 1
+                    upgrade_points -= ranged_damage_upgrade_cost
+                    ranged_damage_upgrade_cost += 2
+                elif ranged_health_button.is_clicked(event.pos) and upgrade_points >= ranged_health_upgrade_cost:
+                    ranged_tank_health_upgrade += 1
+                    upgrade_points -= ranged_health_upgrade_cost
+                    ranged_health_upgrade_cost += 2
+
+                # Ranger ontgrendelen
+                elif unlock_ranger_button and unlock_ranger_button.is_clicked(event.pos) and upgrade_points >= ranger_unlock_cost:
+                    ranger_unlocked = True
+                    upgrade_points -= ranger_unlock_cost
+
+                # Back naar het hoofdmenu
                 elif back_button.is_clicked(event.pos):
                     return
 
-        # Draw buttons
+        # Knoppen tekenen
         damage_button.draw(screen)
         health_button.draw(screen)
+        if unlock_ranger_button:
+            unlock_ranger_button.draw(screen)
+        else:
+            ranged_damage_button.draw(screen)
+            ranged_health_button.draw(screen)
         back_button.draw(screen)
 
-        # Draw upgrade status
+        # Status tonen
         total_damage = BASE_TANK_DAMAGE + tank_damage_upgrade * 2
         total_health = BASE_TANK_HEALTH + tank_health_upgrade * 10
+        ranged_total_damage = 34 + ranged_tank_damage_upgrade * 3
+        ranged_total_health = 50 + ranged_tank_health_upgrade * 5
 
         status_text = FONT.render(f"Upgrade Points: {upgrade_points}", True, WHITE)
-        damage_text = FONT.render(f"Total Damage: {total_damage}", True, WHITE)
-        health_text = FONT.render(f"Total Health: {total_health}", True, WHITE)
+        tank_stats_text = FONT.render(f"Tank - Damage: {total_damage}, Health: {total_health}", True, WHITE)
+        ranged_stats_text = FONT.render(f"Ranged Tank - Damage: {ranged_total_damage}, Health: {ranged_total_health}", True, WHITE)
+        ranger_status = FONT.render(f"Ranger Unlocked: {'Yes' if ranger_unlocked else 'No'}", True, WHITE)
 
         screen.blit(status_text, (10, 10))
-        screen.blit(damage_text, (10, 50))
-        screen.blit(health_text, (10, 90))
+        screen.blit(tank_stats_text, (10, 50))
+        screen.blit(ranged_stats_text, (10, 90))
+        screen.blit(ranger_status, (10, 130))
 
         pygame.display.flip()
-        clock.tick(FPS)
 
 def main_menu():
     start_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Start Game", "start")
