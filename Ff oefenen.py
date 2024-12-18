@@ -42,6 +42,26 @@ clock = pygame.time.Clock()
 # Load background image
 background_image = pygame.image.load("background.png").convert()
 
+#scores opslaan
+def save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade): 
+    with open('saved.txt', 'w') as f:
+        f.write(f"Upgrade points: {upgrade_points}\n")
+        f.write(f"Damage: {tank_damage_upgrade}\n")
+        f.write(f"Health: {tank_health_upgrade}")
+
+def load_stats(): 
+    with open('saved.txt', 'r') as f:
+        inhoud = f.read()
+        inhoud = inhoud.split("\n")
+        upgrade_points = int(inhoud[0].split(":")[1].strip())
+        tank_damage_upgrade = int(inhoud[1].split(":")[1].strip())
+        tank_health_upgrade = int(inhoud[2].split(":")[1].strip())
+        return upgrade_points, tank_damage_upgrade, tank_health_upgrade
+
+def test_load_stats():
+    result = load_stats()
+    print("Result from load_stats:", result)
+
 # Classes
 class Tank(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -50,6 +70,7 @@ class Tank(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, (200, 120))
         self.rect = self.image.get_rect(center=(x, y))
         self.max_health = BASE_TANK_HEALTH + tank_health_upgrade + 10  # Opslaan van maximale gezondheid
+        self.health = self.max_health
         self.damage = BASE_TANK_DAMAGE + tank_damage_upgrade + 2
         self.speed = 2
         self.target = None
@@ -227,6 +248,15 @@ class Button:
 
 class Game:
     def __init__(self):
+        loaded_stats = load_stats()
+        if loaded_stats != (0, 0, 0):
+            print(f"Loaded stats: {loaded_stats}")  # Dit zal de geladen waarden tonen
+            self.upgrade_points, self.tank_damage_upgrade, self.tank_health_upgrade = loaded_stats
+        else:
+            self.upgrade_points = 0
+            self.tank_damage_upgrade = 0
+            self.tank_health_upgrade = 0
+
         self.tanks = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.resources = 100
@@ -240,7 +270,7 @@ class Game:
         self.enemy_health_multiplier = 1.0
         self.enemy_damage_multiplier = 1.0
         self.enemy_speed_multiplier = 1.0
-        self.projectile = pygame.sprite.Group()  # Groep voor alle projectielen
+        self.projectile = pygame.sprite.Group()
         self.tank_button = Button(SCREEN_WIDTH - 150, SCREEN_HEIGHT - 100, 140, 40, "Place Tank", lambda: self.place_tank())
         self.ranged_tank_button = Button(SCREEN_WIDTH - 150, SCREEN_HEIGHT - 50, 140, 40, "Place Ranged", lambda: self.place_ranged_tank())
 
@@ -270,7 +300,7 @@ class Game:
     def start_new_wave(self):
         self.wave += 1
         self.enemy_health_multiplier += 0.2
-        self.enemy_damage_multiplier += 0.1
+        self.enemy_damage_multiplier += 0.2
         self.enemy_speed_multiplier += 0.1
         self.enemies_to_spawn += 3
         self.spawned_enemies = 0
@@ -379,9 +409,7 @@ class Game:
             pygame.display.flip()
             clock.tick(FPS)
 
-def upgrade_menu():
-    global tank_damage_upgrade, tank_health_upgrade, upgrade_points
-
+def upgrade_menu(tank_damage_upgrade, tank_health_upgrade, upgrade_points):
     damage_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Upgrade Damage (2 pts)", "damage")
     health_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 50, "Upgrade Health (2 pts)", "health")
     back_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Back", "back")
@@ -403,6 +431,7 @@ def upgrade_menu():
                     upgrade_points -= 2
                 elif back_button.is_clicked(event.pos):
                     return
+                save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade)
 
         # Draw buttons
         damage_button.draw(screen)
@@ -427,23 +456,29 @@ def upgrade_menu():
 def main_menu():
     start_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Start Game", "start")
     upgrade_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 50, "Upgrades", "upgrades")
-    quit_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Quit", "quit")
+    quit_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Quit", "quit") 
 
     while True:
         screen.fill(BLACK)
-
         # Event handling
+        upgrade_points, tank_damage_upgrade, tank_health_upgrade = load_stats()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade)
                 pygame.quit()
                 quit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
+                test_load_stats()
                 if start_button.is_clicked(event.pos):
+                    test_load_stats()
                     game = Game()
                     game.run()
                 elif upgrade_button.is_clicked(event.pos):
-                    upgrade_menu()
+                    test_load_stats()
+                    upgrade_menu(tank_damage_upgrade, tank_health_upgrade, upgrade_points)
+                    
                 elif quit_button.is_clicked(event.pos):
+                    save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade)
                     pygame.quit()
                     quit()
 
