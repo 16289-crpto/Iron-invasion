@@ -50,46 +50,6 @@ clock = pygame.time.Clock()
 background_image = pygame.image.load("background.png").convert()
 lobby_image= pygame.image.load("SterrenAchtergrond.png").convert()
 
-#scores opslaan
-def save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade): 
-    with open('saved.txt', 'w') as f:
-        f.write(f"Upgrade points: {upgrade_points}\n")
-        f.write(f"Damage: {tank_damage_upgrade}\n")
-        f.write(f"Health: {tank_health_upgrade}")
-
-def load_stats(): 
-    with open('saved.txt', 'r') as f:
-        inhoud = f.read()
-        inhoud = inhoud.split("\n")
-        upgrade_points = int(inhoud[0].split(":")[1].strip())
-        tank_damage_upgrade = int(inhoud[1].split(":")[1].strip())
-        tank_health_upgrade = int(inhoud[2].split(":")[1].strip())
-        return upgrade_points, tank_damage_upgrade, tank_health_upgrade
-
-def test_load_stats():
-    result = load_stats()
-    print("Result from load_stats:", result)
-
-#scores opslaan
-def save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade): 
-    with open('saved.txt', 'w') as f:
-        f.write(f"Upgrade points: {upgrade_points}\n")
-        f.write(f"Damage: {tank_damage_upgrade}\n")
-        f.write(f"Health: {tank_health_upgrade}")
-
-def load_stats(): 
-    with open('saved.txt', 'r') as f:
-        inhoud = f.read()
-        inhoud = inhoud.split("\n")
-        upgrade_points = int(inhoud[0].split(":")[1].strip())
-        tank_damage_upgrade = int(inhoud[1].split(":")[1].strip())
-        tank_health_upgrade = int(inhoud[2].split(":")[1].strip())
-        return upgrade_points, tank_damage_upgrade, tank_health_upgrade
-
-def test_load_stats():
-    result = load_stats()
-    print("Result from load_stats:", result)
-
 # Classes
 class Tank(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -347,15 +307,6 @@ class Button:
 
 class Game:
     def __init__(self):
-        loaded_stats = load_stats()
-        if loaded_stats != (0, 0, 0):
-            print(f"Loaded stats: {loaded_stats}")  # Dit zal de geladen waarden tonen
-            self.upgrade_points, self.tank_damage_upgrade, self.tank_health_upgrade = loaded_stats
-        else:
-            self.upgrade_points = 0
-            self.tank_damage_upgrade = 0
-            self.tank_health_upgrade = 0
-
         self.tanks = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.resources = 100
@@ -613,7 +564,6 @@ def upgrade_menu():
                 # Back naar het hoofdmenu
                 elif back_button.is_clicked(event.pos):
                     return
-                save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade)
 
         # Knoppen tekenen
         damage_button.draw(screen)
@@ -649,26 +599,19 @@ def main_menu():
     quit_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Quit", "quit")
     screen.blit(lobby_image, (0, -200)) 
     while True:
-        screen.fill(BLACK)
+
         # Event handling
-        upgrade_points, tank_damage_upgrade, tank_health_upgrade = load_stats()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade)
                 pygame.quit()
                 quit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                test_load_stats()
                 if start_button.is_clicked(event.pos):
-                    test_load_stats()
                     game = Game()
                     game.run()
                 elif upgrade_button.is_clicked(event.pos):
-                    test_load_stats()
-                    upgrade_menu(tank_damage_upgrade, tank_health_upgrade, upgrade_points)
-                    
+                    upgrade_menu()
                 elif quit_button.is_clicked(event.pos):
-                    save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade)
                     pygame.quit()
                     quit()
 
