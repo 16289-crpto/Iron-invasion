@@ -33,11 +33,16 @@ SKYBLUE = (22, 65, 124)
 GRAY = (128, 128, 128)
 
 # Upgrade Variables
-upgrade_points = 350
+upgrade_points = 500
 tank_damage_upgrade = 0
 tank_health_upgrade = 0
 ranged_tank_damage_upgrade = 0
 ranged_tank_health_upgrade = 0
+
+damage_upgrade_cost = 2
+health_upgrade_cost = 2
+ranged_damage_upgrade_cost = 2
+ranged_health_upgrade_cost = 2
 
 # Voeg dit toe aan het begin van je script
 ranger_unlocked = False
@@ -120,12 +125,10 @@ class Tank(pygame.sprite.Sprite):
             # No target, move left
             self.rect.x -= self.speed
 
-
     def draw_health_bar(self, screen):
-        bar_width = 30
+        bar_width = 40
         bar_height = 5
-        max_health = BASE_TANK_HEALTH + tank_health_upgrade + 10
-        health_ratio = self.health / max_health
+        health_ratio = self.health / self.max_health
         bar_color = GREEN if health_ratio > 0.5 else RED
         pygame.draw.rect(screen, GRAY, (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
         pygame.draw.rect(screen, bar_color, (self.rect.centerx - bar_width // 2, self.rect.top - 10, int(bar_width * health_ratio), bar_height))
@@ -490,11 +493,6 @@ def upgrade_menu():
     global damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost
     global ranger_unlocked
 
-    damage_upgrade_cost = 2
-    health_upgrade_cost = 2
-    ranged_damage_upgrade_cost = 2
-    ranged_health_upgrade_cost = 2
-
     # Ranger ontgrendelstatus
     ranger_unlock_cost = 100
     ranger_unlocked = ranger_unlocked if 'ranger_unlocked' in globals() else False
@@ -545,24 +543,25 @@ def upgrade_menu():
                     tank_health_upgrade += 1
                     upgrade_points -= health_upgrade_cost
                     health_upgrade_cost += 2
-
+                
                 # Upgrades voor ranged tank
-                elif ranged_damage_button.is_clicked(event.pos) and upgrade_points >= ranged_damage_upgrade_cost:
-                    ranged_tank_damage_upgrade += 1
-                    upgrade_points -= ranged_damage_upgrade_cost
-                    ranged_damage_upgrade_cost += 2
-                elif ranged_health_button.is_clicked(event.pos) and upgrade_points >= ranged_health_upgrade_cost:
-                    ranged_tank_health_upgrade += 1
-                    upgrade_points -= ranged_health_upgrade_cost
-                    ranged_health_upgrade_cost += 2
-
+                if ranger_unlocked:
+                    if ranged_health_button.is_clicked(event.pos) and upgrade_points >= ranged_health_upgrade_cost:
+                        ranged_tank_health_upgrade += 1
+                        upgrade_points -= ranged_health_upgrade_cost
+                        ranged_health_upgrade_cost += 2
+                    elif ranged_damage_button.is_clicked(event.pos) and upgrade_points >= ranged_damage_upgrade_cost:
+                        ranged_tank_damage_upgrade += 1
+                        upgrade_points -= ranged_damage_upgrade_cost
+                        ranged_damage_upgrade_cost += 2
+                
                 # Ranger ontgrendelen
-                elif unlock_ranger_button and unlock_ranger_button.is_clicked(event.pos) and upgrade_points >= ranger_unlock_cost:
+                if unlock_ranger_button and unlock_ranger_button.is_clicked(event.pos) and upgrade_points >= ranger_unlock_cost:
                     ranger_unlocked = True
                     upgrade_points -= ranger_unlock_cost
 
                 # Back naar het hoofdmenu
-                elif back_button.is_clicked(event.pos):
+                if back_button.is_clicked(event.pos):
                     return
 
         # Knoppen tekenen
@@ -592,6 +591,7 @@ def upgrade_menu():
         screen.blit(ranger_status, (10, 130))
 
         pygame.display.flip()
+
 
 def main_menu():
     start_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Start Game", "start")
