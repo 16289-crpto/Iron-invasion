@@ -141,7 +141,7 @@ class Projectile(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)  # Stel de startpositie in
         self.target = target
-        self.speed = 5
+        self.speed = 7
         self.damage = damage
         self.shooter = shooter  # De tank die de kogel heeft afgeschoten
 
@@ -178,7 +178,7 @@ class RangedTank(Tank):
         self.health = self.max_health
         self.damage = 34 + ranged_tank_damage_upgrade * 3
         self.range = 150
-        self.cooldown = 750
+        self.cooldown = 500
         self.speed = 1
         self.last_shot_time = pygame.time.get_ticks()
 
