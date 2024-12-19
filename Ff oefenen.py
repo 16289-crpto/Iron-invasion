@@ -33,7 +33,7 @@ SKYBLUE = (22, 65, 124)
 GRAY = (128, 128, 128)
 
 # Upgrade Variables
-upgrade_points = 500
+upgrade_points = 0
 tank_damage_upgrade = 0
 tank_health_upgrade = 0
 ranged_tank_damage_upgrade = 0
