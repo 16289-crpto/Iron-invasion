@@ -1,3 +1,9 @@
 Upgrade points: 0
-Damage: 0
-Health: 0
+Tank Damage: 0
+Tank Health: 0
+Ranged Damage: 0
+Ranged Health: 0
+Tank Damage Upgrade Cost: 2
+Ranged Health Upgrade Cost: 2
+Ranged Damage Upgrade Cost: 2
+Ranged Health Upgrade Cost: 2
