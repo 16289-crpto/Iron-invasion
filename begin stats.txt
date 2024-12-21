@@ -1,0 +1,11 @@
+Als je het spel wilt reseten, moet je deze waardes invullen in saved.txt:
+Upgrade points: 0
+Tank Damage: 0
+Tank Health: 0
+Ranged Damage: 0
+Ranged Health: 0
+Tank Damage Upgrade Cost: 2
+Ranged Health Upgrade Cost: 2
+Ranged Damage Upgrade Cost: 2
+Ranged Health Upgrade Cost: 2
+Ranged Unlocked: False
