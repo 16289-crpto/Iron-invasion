@@ -38,7 +38,6 @@ tank_damage_upgrade = 0
 tank_health_upgrade = 0
 ranged_tank_damage_upgrade = 0
 ranged_tank_health_upgrade = 0
-
 damage_upgrade_cost = 2
 health_upgrade_cost = 2
 ranged_damage_upgrade_cost = 2
@@ -54,6 +53,39 @@ clock = pygame.time.Clock()
 # Load background image
 background_image = pygame.image.load("background.png").convert()
 lobby_image= pygame.image.load("SterrenAchtergrond.png").convert()
+
+#scores opslaan
+def save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked): 
+    with open('saved.txt', 'w') as f:
+        f.write(f"Upgrade points: {upgrade_points}\n")
+        f.write(f"Tank Damage: {tank_damage_upgrade}\n")
+        f.write(f"Tank Health: {tank_health_upgrade}\n")
+        f.write(f"Ranged Damage: {ranged_tank_damage_upgrade}\n")
+        f.write(f"Ranged Health: {ranged_tank_health_upgrade}\n")
+        f.write(f"Tank Damage Upgrade Cost: {damage_upgrade_cost}\n")
+        f.write(f"Ranged Health Upgrade Cost: {health_upgrade_cost}\n")
+        f.write(f"Ranged Damage Upgrade Cost: {ranged_damage_upgrade_cost}\n")
+        f.write(f"Ranged Health Upgrade Cost: {ranged_health_upgrade_cost}\n")
+        f.write(f"Ranged Unlocked: {ranger_unlocked}")
+
+def load_stats(): 
+    global upgrade_points, tank_damage_upgrade, tank_health_upgrade
+    global ranged_tank_damage_upgrade, ranged_tank_health_upgrade, ranger_unlocked
+    global damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost
+
+    with open('saved.txt', 'r') as f:
+        inhoud = f.read()
+        inhoud = inhoud.split("\n")
+        upgrade_points = int(inhoud[0].split(":")[1].strip())
+        tank_damage_upgrade = int(inhoud[1].split(":")[1].strip())
+        tank_health_upgrade = int(inhoud[2].split(":")[1].strip())
+        ranged_tank_damage_upgrade = int(inhoud[3].split(":")[1].strip())
+        ranged_tank_health_upgrade = int(inhoud[4].split(":")[1].strip())
+        damage_upgrade_cost = int(inhoud[5].split(":")[1].strip())
+        health_upgrade_cost = int(inhoud[6].split(":")[1].strip())
+        ranged_damage_upgrade_cost = int(inhoud[7].split(":")[1].strip())
+        ranged_health_upgrade_cost = int(inhoud[8].split(":")[1].strip())
+        ranger_unlocked = inhoud[9].split(":")[1].strip() == "True"
 
 # Classes
 class Tank(pygame.sprite.Sprite):
@@ -445,6 +477,12 @@ class Game:
         pygame.time.delay(3000)
         main_menu()
 
+    def save_scores(self):
+        save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, 
+                ranged_tank_damage_upgrade, ranged_tank_health_upgrade, 
+                damage_upgrade_cost, health_upgrade_cost, 
+                ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked)
+
     def run(self):
         running = True
         while running:
@@ -482,6 +520,7 @@ class Game:
             self.draw_ui()
 
             if self.check_game_over():
+                self.save_scores() #zorgt voor opslaan als game voorbij is
                 self.game_over_screen()
                 running = False  # Exit the game loop to return to main menu
 
@@ -594,24 +633,38 @@ def upgrade_menu():
 
 
 def main_menu():
+    global upgrade_points, tank_damage_upgrade, tank_health_upgrade
+    global ranged_tank_damage_upgrade, ranged_tank_health_upgrade
+    global damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost
+
+    load_stats()
+
     start_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50, "Start Game", "start")
     upgrade_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 20, 200, 50, "Upgrades", "upgrades")
     quit_button = Button(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50, "Quit", "quit")
     screen.blit(lobby_image, (0, -200)) 
+    
     while True:
+        screen.fill(BLACK)
 
         # Event handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked)
                 pygame.quit()
                 quit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if start_button.is_clicked(event.pos):
                     game = Game()
-                    game.run()
+                    game.run()  # Start het spel
+                    print(f"Upgrade points before saving: {upgrade_points}")
+                    # Sla de scores op na het spel
+                    save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked)
                 elif upgrade_button.is_clicked(event.pos):
                     upgrade_menu()
+                    save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked)
                 elif quit_button.is_clicked(event.pos):
+                    save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked)
                     pygame.quit()
                     quit()
 
