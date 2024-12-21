@@ -7,3 +7,4 @@ Tank Damage Upgrade Cost: 2
 Ranged Health Upgrade Cost: 2
 Ranged Damage Upgrade Cost: 2
 Ranged Health Upgrade Cost: 2
+Ranged Unlocked: False
