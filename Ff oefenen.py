@@ -32,21 +32,6 @@ DARKBLUE = (0, 18, 154)
 SKYBLUE = (22, 65, 124)
 GRAY = (128, 128, 128)
 
-# Upgrade Variables
-upgrade_points = 0
-tank_damage_upgrade = 0
-tank_health_upgrade = 0
-ranged_tank_damage_upgrade = 0
-ranged_tank_health_upgrade = 0
-damage_upgrade_cost = 2
-health_upgrade_cost = 2
-ranged_damage_upgrade_cost = 2
-ranged_health_upgrade_cost = 2
-high_wave = 0
-
-# Voeg dit toe aan het begin van je script
-ranger_unlocked = False
-
 # Game setup
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
