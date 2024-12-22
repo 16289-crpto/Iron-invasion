@@ -42,6 +42,7 @@ damage_upgrade_cost = 2
 health_upgrade_cost = 2
 ranged_damage_upgrade_cost = 2
 ranged_health_upgrade_cost = 2
+high_wave = 0
 
 # Voeg dit toe aan het begin van je script
 ranger_unlocked = False
@@ -52,10 +53,10 @@ clock = pygame.time.Clock()
 
 # Load background image
 background_image = pygame.image.load("background.png").convert()
-lobby_image= pygame.image.load("SterrenAchtergrond.png").convert()
+lobby_image = pygame.image.load("SterrenAchtergrond.png").convert()
 
 #scores opslaan
-def save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked): 
+def save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked, high_wave): 
     with open('saved.txt', 'w') as f:
         f.write(f"Upgrade points: {upgrade_points}\n")
         f.write(f"Tank Damage: {tank_damage_upgrade}\n")
@@ -66,12 +67,13 @@ def save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged
         f.write(f"Ranged Health Upgrade Cost: {health_upgrade_cost}\n")
         f.write(f"Ranged Damage Upgrade Cost: {ranged_damage_upgrade_cost}\n")
         f.write(f"Ranged Health Upgrade Cost: {ranged_health_upgrade_cost}\n")
-        f.write(f"Ranged Unlocked: {ranger_unlocked}")
+        f.write(f"Ranged Unlocked: {ranger_unlocked}\n")
+        f.write(f"Highest Wave : {high_wave}")
 
 def load_stats(): 
     global upgrade_points, tank_damage_upgrade, tank_health_upgrade
     global ranged_tank_damage_upgrade, ranged_tank_health_upgrade, ranger_unlocked
-    global damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost
+    global damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, high_wave
 
     with open('saved.txt', 'r') as f:
         inhoud = f.read()
@@ -86,6 +88,7 @@ def load_stats():
         ranged_damage_upgrade_cost = int(inhoud[7].split(":")[1].strip())
         ranged_health_upgrade_cost = int(inhoud[8].split(":")[1].strip())
         ranger_unlocked = inhoud[9].split(":")[1].strip() == "True"
+        high_wave = int(inhoud[10].split(":")[1].strip())
 
 # Classes
 class Tank(pygame.sprite.Sprite):
@@ -348,6 +351,7 @@ class Game:
         self.resource_timer = pygame.time.get_ticks()
         self.spawn_timer = 0
         self.wave = 1
+        self.high_wave = high_wave
         self.escaped_enemies = 0
         self.wave_active = True
         self.enemies_to_spawn = 5
@@ -389,7 +393,6 @@ class Game:
             self.start_new_wave()
 
     def start_new_wave(self):
-        global base_hp_Eranger, base_damage_Eranger
         self.wave += 1
         self.enemy_health_multiplier += 0.2
         self.enemy_damage_multiplier += 0.2
@@ -397,6 +400,10 @@ class Game:
         self.enemies_to_spawn += 3
         self.spawned_enemies = 0
         self.wave_active = True
+
+    def highscore(self):
+        if self.wave > self.high_wave:
+            self.high_wave = self.wave
 
     def place_ranged_tank(self):
         global ranger_unlocked
@@ -448,11 +455,13 @@ class Game:
         resources_text = FONT.render(f"Resources: {self.resources}", True, BLACK)
         upgrade_points_text = FONT.render(f"Upgrade Points: {upgrade_points}", True, BLACK)
         wave_text = FONT.render(f"Wave: {self.wave}", True, BLACK)
+        high_wave_text = FONT.render(f"Highest Wave: {self.high_wave}", True, BLACK)
         escaped_text = FONT.render(f"Escaped: {self.escaped_enemies}/{MAX_ESCAPED_ENEMIES}", True, BLACK)
         screen.blit(resources_text, (10, 10))
         screen.blit(upgrade_points_text, (10, 50))
         screen.blit(wave_text, (10, 90))
-        screen.blit(escaped_text, (10, 130))
+        screen.blit(high_wave_text, (10, 130))
+        screen.blit(escaped_text, (10, 170))
         self.tank_button.draw(screen)  # Teken de standaard tank-knop
 
         # Controleer of de ranger is ontgrendeld voordat de knop wordt weergegeven
@@ -475,13 +484,14 @@ class Game:
         screen.blit(points_text, points_rect)
         pygame.display.flip()
         pygame.time.delay(3000)
+        self.save_scores()
         main_menu()
 
     def save_scores(self):
         save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, 
                 ranged_tank_damage_upgrade, ranged_tank_health_upgrade, 
                 damage_upgrade_cost, health_upgrade_cost, 
-                ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked)
+                ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked, self.high_wave)
 
     def run(self):
         running = True
@@ -508,6 +518,7 @@ class Game:
             self.handle_enemy_actions()
             self.projectile.update()  # Update alle projectielen
             self.check_wave_end()
+            self.highscore()
 
             # Draw everything
             self.tanks.draw(screen)
@@ -526,6 +537,7 @@ class Game:
 
             pygame.display.flip()
             clock.tick(FPS)
+
 def upgrade_menu():
     global tank_damage_upgrade, tank_health_upgrade, upgrade_points
     global ranged_tank_damage_upgrade, ranged_tank_health_upgrade
@@ -650,7 +662,7 @@ def main_menu():
         # Event handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked)
+                save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked, high_wave)
                 pygame.quit()
                 quit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -659,12 +671,12 @@ def main_menu():
                     game.run()  # Start het spel
                     print(f"Upgrade points before saving: {upgrade_points}")
                     # Sla de scores op na het spel
-                    save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked)
+                    save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked, high_wave)
                 elif upgrade_button.is_clicked(event.pos):
                     upgrade_menu()
-                    save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked)
+                    save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked, high_wave)
                 elif quit_button.is_clicked(event.pos):
-                    save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked)
+                    save_scores(upgrade_points, tank_damage_upgrade, tank_health_upgrade, ranged_tank_damage_upgrade, ranged_tank_health_upgrade, damage_upgrade_cost, health_upgrade_cost, ranged_damage_upgrade_cost, ranged_health_upgrade_cost, ranger_unlocked, high_wave)
                     pygame.quit()
                     quit()
 
@@ -682,4 +694,4 @@ def main_menu():
         clock.tick(FPS)
 
 if __name__ == "__main__":
-    main_menu()   
+    main_menu()
