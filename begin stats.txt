@@ -9,4 +9,4 @@ Ranged Health Upgrade Cost: 2
 Ranged Damage Upgrade Cost: 2
 Ranged Health Upgrade Cost: 2
 Ranged Unlocked: False
-Highest Wave : 0
+Highest Wave: 0
