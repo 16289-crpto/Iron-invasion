@@ -28,7 +28,6 @@ COLORS = [
     (255, 0, 0),      # RED
     (0, 255, 0),      # GREEN
     (128, 128, 128),  # GRAY
-    (0, 100, 0),      # DARKGREEN
     (0, 18, 154),     # DARKBLUE
     (22, 65, 124)     # SKYBLUE
 ]
@@ -313,7 +312,7 @@ class EnemyRanger(Enemy):
 class Button:
     def __init__(self, x, y, width, height, text, action):
         self.rect = pygame.Rect(x, y, width, height)
-        self.color = COLORS[7]
+        self.color = COLORS[6]
         self.text = text
         self.action = action
 
@@ -480,7 +479,7 @@ class Game:
         running = True
         while running:
             # Achtergrond afbeelding gebruiken
-            pygame.draw.rect(screen, COLORS[6], (0, PATH_TOP, SCREEN_WIDTH, PATH_BOTTOM - PATH_TOP))
+            pygame.draw.rect(screen, COLORS[5], (0, PATH_TOP, SCREEN_WIDTH, PATH_BOTTOM - PATH_TOP))
             screen.blit(background_image, (0, 0))
 
             # Event handling
