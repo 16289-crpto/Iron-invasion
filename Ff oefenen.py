@@ -2,7 +2,7 @@ import pygame
 import random
 import math
 
-# Initialize Pygame
+# Initialiseer Pygame
 pygame.init()
 
 # Constants
@@ -19,24 +19,24 @@ ENEMY_HEALTH = 100
 MAX_ESCAPED_ENEMIES = 10
 FONT = pygame.font.Font(None, 36)
 FONTTITLE = pygame.font.Font(None, 80)
-RESOURCE_GENERATION_INTERVAL = 1000  # 1 second
+RESOURCE_GENERATION_INTERVAL = 1000  # 1 seconde
 
-# Colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-GREEN = (0, 255, 0)
-DARKGREEN = (0, 100, 0,)
-BLUE = (0, 0, 255)
-DARKBLUE = (0, 18, 154)
-SKYBLUE = (22, 65, 124)
-GRAY = (128, 128, 128)
-
+#lijst met kleuren
+COLORS = [
+    (255, 255, 255),  # WHITE
+    (0, 0, 0),        # BLACK
+    (255, 0, 0),      # RED
+    (0, 255, 0),      # GREEN
+    (128, 128, 128),  # GRAY
+    (0, 100, 0),      # DARKGREEN
+    (0, 18, 154),     # DARKBLUE
+    (22, 65, 124)     # SKYBLUE
+]
 # Game setup
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
 
-# Load background image
+# laden van background image
 background_image = pygame.image.load("background.png").convert()
 lobby_image = pygame.image.load("SterrenAchtergrond.png").convert()
 
@@ -92,8 +92,8 @@ class Tank(pygame.sprite.Sprite):
         bar_width = 40
         bar_height = 5
         health_ratio = self.health / self.max_health
-        bar_color = GREEN if health_ratio > 0.5 else RED
-        pygame.draw.rect(screen, GRAY, (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
+        bar_color = COLORS[3] if health_ratio > 0.5 else COLORS[2]
+        pygame.draw.rect(screen, COLORS[4], (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
         pygame.draw.rect(screen, bar_color, (self.rect.centerx - bar_width // 2, self.rect.top - 10, int(bar_width * health_ratio), bar_height))
 
     def find_target(self, enemies):
@@ -104,7 +104,7 @@ class Tank(pygame.sprite.Sprite):
 
     def move_and_attack(self):
         if self.target:
-            # Move towards target
+            # naar target bewegen
             dx, dy = self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery
             distance = math.hypot(dx, dy)
             if distance > 0:
@@ -112,21 +112,21 @@ class Tank(pygame.sprite.Sprite):
                 self.rect.x += dx * self.speed
                 self.rect.y += dy * self.speed
 
-            # Attack if close enough
+            # Aanvallen als het dichtbij genoeg is
             if distance < 20:
                 self.target.health -= self.damage
                 if self.target.health <= 0:
-                    if isinstance(self.target, Enemy):  # Alleen punten voor vijanden
+                    if isinstance(self.target, Enemy):
                         global upgrade_points
                         upgrade_points += 1
                     self.target.kill()
         else:
-            # No target, move left
+            # geen target
             self.rect.x -= self.speed
 
     def move_and_attack(self):
         if self.target:
-            # Move towards target
+            # beweeg naar target
             dx, dy = self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery
             distance = math.hypot(dx, dy)
             if distance > 0:
@@ -134,23 +134,23 @@ class Tank(pygame.sprite.Sprite):
                 self.rect.x += dx * self.speed
                 self.rect.y += dy * self.speed
 
-            # Attack if close enough
+            # Target aanvallen
             if distance < 20:
                 self.target.health -= self.damage
                 if self.target.health <= 0:
                     global upgrade_points
-                    upgrade_points += 1  # Earn an upgrade point
+                    upgrade_points += 1 
                     self.target.kill()
         else:
-            # No target, move left
+            # geen target
             self.rect.x -= self.speed
 
     def draw_health_bar(self, screen):
         bar_width = 40
         bar_height = 5
         health_ratio = self.health / self.max_health
-        bar_color = GREEN if health_ratio > 0.5 else RED
-        pygame.draw.rect(screen, GRAY, (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
+        bar_color = COLORS[3] if health_ratio > 0.5 else COLORS[2]
+        pygame.draw.rect(screen, COLORS[4], (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
         pygame.draw.rect(screen, bar_color, (self.rect.centerx - bar_width // 2, self.rect.top - 10, int(bar_width * health_ratio), bar_height))
 
 class Projectile(pygame.sprite.Sprite):
@@ -206,10 +206,10 @@ class RangedTank(Tank):
         bar_width = 40
         bar_height = 5
         health_ratio = self.health / self.max_health
-        bar_color = GREEN if health_ratio > 0.5 else RED
+        bar_color = COLORS[3] if health_ratio > 0.5 else COLORS[2]
         bar_x = self.rect.left + 20
         bar_y = self.rect.top - bar_height - 5
-        pygame.draw.rect(screen, GRAY, (bar_x, bar_y, bar_width, bar_height))
+        pygame.draw.rect(screen, COLORS[4], (bar_x, bar_y, bar_width, bar_height))
         pygame.draw.rect(screen, bar_color, (bar_x, bar_y, int(bar_width * health_ratio), bar_height))
 
     def move_and_attack(self, projectiles_group):
@@ -231,7 +231,7 @@ class RangedTank(Tank):
                 projectiles_group.add(projectile)  # Voeg de kogel toe aan de groep projectielen
                 self.last_shot_time = current_time
         else:
-            # No target, move left
+            # geen target
             self.rect.x -= self.speed
     
 class Enemy(pygame.sprite.Sprite):
@@ -251,8 +251,8 @@ class Enemy(pygame.sprite.Sprite):
         bar_width = 30
         bar_height = 5
         health_ratio = self.health / self.max_health
-        bar_color = GREEN if health_ratio > 0.5 else RED
-        pygame.draw.rect(screen, GRAY, (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
+        bar_color = COLORS[3] if health_ratio > 0.5 else COLORS[2]
+        pygame.draw.rect(screen, COLORS[4], (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
         pygame.draw.rect(screen, bar_color, (self.rect.centerx - bar_width // 2, self.rect.top - 10, int(bar_width * health_ratio), bar_height))
 
     def find_target(self, tanks):
@@ -313,13 +313,13 @@ class EnemyRanger(Enemy):
 class Button:
     def __init__(self, x, y, width, height, text, action):
         self.rect = pygame.Rect(x, y, width, height)
-        self.color = SKYBLUE
+        self.color = COLORS[7]
         self.text = text
         self.action = action
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.color, self.rect)
-        text_surface = FONT.render(self.text, True, WHITE)
+        text_surface = FONT.render(self.text, True, COLORS[0])
         text_rect = text_surface.get_rect(center=self.rect.center)
         screen.blit(text_surface, text_rect)
 
@@ -435,11 +435,11 @@ class Game:
                 enemy.kill()
 
     def draw_ui(self):
-        resources_text = FONT.render(f"Resources: {self.resources}", True, BLACK)
-        upgrade_points_text = FONT.render(f"Upgrade Points: {upgrade_points}", True, BLACK)
-        wave_text = FONT.render(f"Wave: {self.wave}", True, BLACK)
-        high_wave_text = FONT.render(f"Highest Wave: {self.high_wave}", True, BLACK)
-        escaped_text = FONT.render(f"Escaped: {self.escaped_enemies}/{MAX_ESCAPED_ENEMIES}", True, BLACK)
+        resources_text = FONT.render(f"Resources: {self.resources}", True, COLORS[1])
+        upgrade_points_text = FONT.render(f"Upgrade Points: {upgrade_points}", True, COLORS[1])
+        wave_text = FONT.render(f"Wave: {self.wave}", True, COLORS[1])
+        high_wave_text = FONT.render(f"Highest Wave: {self.high_wave}", True, COLORS[1])
+        escaped_text = FONT.render(f"Escaped: {self.escaped_enemies}/{MAX_ESCAPED_ENEMIES}", True, COLORS[1])
         screen.blit(resources_text, (10, 10))
         screen.blit(upgrade_points_text, (10, 50))
         screen.blit(wave_text, (10, 90))
@@ -459,9 +459,9 @@ class Game:
     def game_over_screen(self):
         screen.blit(lobby_image, (0, -200)) 
         global upgrade_points
-        game_over_text = FONTTITLE.render("Game Over!", True, RED)
+        game_over_text = FONTTITLE.render("Game Over!", True, COLORS[2])
         game_over_rect = game_over_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
-        points_text = FONT.render(f"You have a total of {upgrade_points} upgrade points!", True, WHITE)
+        points_text = FONT.render(f"You have a total of {upgrade_points} upgrade points!", True, COLORS[0])
         points_rect = points_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20))
         screen.blit(game_over_text, game_over_rect)
         screen.blit(points_text, points_rect)
@@ -479,9 +479,9 @@ class Game:
     def run(self):
         running = True
         while running:
-            # Use the background image for the screen
-            pygame.draw.rect(screen, DARKGREEN, (0, PATH_TOP, SCREEN_WIDTH, PATH_BOTTOM - PATH_TOP))
-            screen.blit(background_image, (0, 0))  # Draw background at top-left corner
+            # Achtergrond afbeelding gebruiken
+            pygame.draw.rect(screen, COLORS[6], (0, PATH_TOP, SCREEN_WIDTH, PATH_BOTTOM - PATH_TOP))
+            screen.blit(background_image, (0, 0))
 
             # Event handling
             for event in pygame.event.get():
@@ -503,7 +503,6 @@ class Game:
             self.check_wave_end()
             self.highscore()
 
-            # Draw everything
             self.tanks.draw(screen)
             self.enemies.draw(screen)
             self.projectile.draw(screen)  # Teken alle projectielen
@@ -516,7 +515,7 @@ class Game:
             if self.check_game_over():
                 self.save_scores() #zorgt voor opslaan als game voorbij is
                 self.game_over_screen()
-                running = False  # Exit the game loop to return to main menu
+                running = False  # Game loop stoppen en terug naar menu
 
             pygame.display.flip()
             clock.tick(FPS)
@@ -536,7 +535,7 @@ def upgrade_menu():
 
         # Dynamisch knopbreedte aanpassen aan de tekstlengte
         def create_dynamic_button(x, y, base_width, height, text, action, adjust_x=True, center=False):
-            rendered_text = FONT.render(text, True, WHITE)
+            rendered_text = FONT.render(text, True, COLORS[0])
             text_width = rendered_text.get_width()
             button_width = max(base_width, text_width + 20)  # Minimaal base_width, anders tekstbreedte + padding
             button_x = x
@@ -614,10 +613,10 @@ def upgrade_menu():
         ranged_total_damage = 34 + ranged_tank_damage_upgrade * 3
         ranged_total_health = 50 + ranged_tank_health_upgrade * 5
 
-        status_text = FONT.render(f"Upgrade Points: {upgrade_points}", True, WHITE)
-        tank_stats_text = FONT.render(f"Tank - Damage: {total_damage}, Health: {total_health}", True, WHITE)
-        ranged_stats_text = FONT.render(f"Ranged Tank - Damage: {ranged_total_damage}, Health: {ranged_total_health}", True, WHITE)
-        ranger_status = FONT.render(f"Ranger Unlocked: {'Yes' if ranger_unlocked else 'No'}", True, WHITE)
+        status_text = FONT.render(f"Upgrade Points: {upgrade_points}", True, COLORS[0])
+        tank_stats_text = FONT.render(f"Tank - Damage: {total_damage}, Health: {total_health}", True, COLORS[0])
+        ranged_stats_text = FONT.render(f"Ranged Tank - Damage: {ranged_total_damage}, Health: {ranged_total_health}", True, COLORS[0])
+        ranger_status = FONT.render(f"Ranger Unlocked: {'Yes' if ranger_unlocked else 'No'}", True, COLORS[0])
 
         screen.blit(status_text, (10, 10))
         screen.blit(tank_stats_text, (10, 50))
@@ -660,13 +659,13 @@ def main_menu():
                     pygame.quit()
                     quit()
 
-        # Draw buttons
+        # Buttons
         start_button.draw(screen)
         upgrade_button.draw(screen)
         quit_button.draw(screen)
 
-        # Draw title
-        title_text = FONTTITLE.render("Iron Invasion", True, WHITE)
+        # Tablad
+        title_text = FONTTITLE.render("Iron Invasion", True, COLORS[0])
         title_rect = title_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 150))
         screen.blit(title_text, title_rect)
 
