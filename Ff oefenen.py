@@ -270,7 +270,6 @@ class Enemy(pygame.sprite.Sprite):
         pygame.draw.rect(screen, GRAY, (self.rect.centerx - bar_width // 2, self.rect.top - 10, bar_width, bar_height))
         pygame.draw.rect(screen, bar_color, (self.rect.centerx - bar_width // 2, self.rect.top - 10, int(bar_width * health_ratio), bar_height))
 
-
     def find_target(self, tanks):
         if tanks:
             self.target = min(tanks, key=lambda tank: math.hypot(self.rect.centerx - tank.rect.centerx, self.rect.centery - tank.rect.centery))
@@ -325,7 +324,6 @@ class EnemyRanger(Enemy):
                 self.last_shot_time = current_time
         else:
             self.rect.x += self.speed
-
 
 class Button:
     def __init__(self, x, y, width, height, text, action):
@@ -643,7 +641,6 @@ def upgrade_menu():
 
         pygame.display.flip()
 
-
 def main_menu():
     global upgrade_points, tank_damage_upgrade, tank_health_upgrade
     global ranged_tank_damage_upgrade, ranged_tank_health_upgrade
@@ -657,8 +654,6 @@ def main_menu():
     screen.blit(lobby_image, (0, -200)) 
     
     while True:
-        screen.fill(BLACK)
-
         # Event handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
